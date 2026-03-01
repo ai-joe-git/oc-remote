@@ -456,4 +456,6 @@
     <string name="home_local_startup_timeout_label">Тайм-аут запуску</string>
     <string name="home_local_startup_timeout_value">%1$d сек</string>
     <string name="home_local_launch_options_title">Параметри запуску</string>
+    <string name="chat_send_shell">Надіслати команду shell</string>
+    <string name="chat_shell_mode_hold_send_hint">Режим shell активний. Утримуйте «Надіслати», щоб повернутися назад.</string>
 </resources>

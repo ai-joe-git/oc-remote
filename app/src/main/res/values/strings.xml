@@ -129,6 +129,8 @@
     <!-- Chat Screen -->
     <string name="chat_input_hint">Message OpenCode…</string>
     <string name="chat_send">Send</string>
+    <string name="chat_send_shell">Send shell command</string>
+    <string name="chat_shell_mode_hold_send_hint">Shell mode active. Hold Send to switch back.</string>
     <string name="chat_stop">Stop</string>
     <string name="chat_abort">Abort</string>
     <string name="chat_empty">Start a conversation with OpenCode</string>

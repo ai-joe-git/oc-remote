@@ -456,4 +456,6 @@ Token: ~%4$d -&gt; ~%5$d</string>
     <string name="home_local_startup_timeout_label">Startzeitüberschreitung</string>
     <string name="home_local_startup_timeout_value">%1$d Sek.</string>
     <string name="home_local_launch_options_title">Startoptionen</string>
+    <string name="chat_send_shell">Shell-Befehl senden</string>
+    <string name="chat_shell_mode_hold_send_hint">Shell-Modus aktiv. Halten Sie \'Senden\', um zurückzuschalten.</string>
 </resources>

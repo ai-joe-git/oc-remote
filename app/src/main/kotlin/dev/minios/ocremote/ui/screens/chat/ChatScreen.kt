@@ -1646,7 +1646,7 @@ fun ChatScreen(
             ChatInputBar(
                 textFieldValue = inputText,
                 onTextFieldValueChange = { newValue ->
-                    val shouldAutoShell = showShellButton && !isShellMode && newValue.text.startsWith("!")
+                    val shouldAutoShell = !isShellMode && newValue.text.startsWith("!")
                     val normalizedValue = if (shouldAutoShell) {
                         val stripped = newValue.text.drop(1).trimStart()
                         val newCursor = (newValue.selection.start - 1).coerceAtLeast(0)
@@ -1711,11 +1711,10 @@ fun ChatScreen(
                                 return@doSend
                             }
                             viewModel.runShellCommand(shellCommand) { ok ->
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        if (ok) context.getString(R.string.chat_shell_executed)
-                                        else context.getString(R.string.chat_shell_failed)
-                                    )
+                                if (!ok) {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(context.getString(R.string.chat_shell_failed))
+                                    }
                                 }
                             }
                             inputText = TextFieldValue("")
@@ -5857,6 +5856,7 @@ private val placeholderHintResIds = listOf(
     R.string.chat_hint_help,
 )
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChatInputBar(
     textFieldValue: TextFieldValue,
@@ -6091,7 +6091,8 @@ private fun ChatInputBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 2.dp, bottom = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -6141,8 +6142,8 @@ private fun ChatInputBar(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(start = 16.dp, end = 4.dp, top = 2.dp, bottom = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             // Agent + Model + Variant + Attach selector row — small, subtle
             if ((modelLabel.isNotEmpty() || agents.size > 1)) {
@@ -6278,12 +6279,12 @@ private fun ChatInputBar(
                         // Attach button (paperclip) — always visible, pinned right, aligned with Send button
                         IconButton(
                             onClick = onAttach,
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
                                 Icons.Default.AttachFile,
                                 contentDescription = stringResource(R.string.chat_attach),
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
@@ -6352,6 +6353,52 @@ private fun ChatInputBar(
                                 onSaveAttachment(imageBytes, attachment.mime, attachment.filename)
                             }
                         },
+                    )
+                }
+            }
+
+            AnimatedVisibility(
+                visible = isShellMode,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (isAmoled) {
+                                Color.Black
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerHigh
+                            }
+                        )
+                        .then(
+                            if (isAmoled) {
+                                Modifier.border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                    shape = RoundedCornerShape(10.dp),
+                                )
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Terminal,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = stringResource(R.string.chat_shell_mode_hold_send_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -6431,11 +6478,46 @@ private fun ChatInputBar(
                     )
                 }
 
-                // Send button — icon only, compact
-                IconButton(
-                    onClick = onSend,
-                    enabled = canSend,
-                    modifier = Modifier.size(44.dp)
+                // Send button — tap to send, long-press toggles shell mode
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(
+                            if (isShellMode && !isSending) {
+                                if (isAmoled) {
+                                    Color.Black
+                                } else {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                                }
+                            } else {
+                                Color.Transparent
+                            }
+                        )
+                        .then(
+                            if (isShellMode && !isSending) {
+                                Modifier.border(
+                                    width = if (isAmoled) 1.2.dp else 1.dp,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = if (isAmoled) 0.88f else 0.75f),
+                                    shape = RoundedCornerShape(22.dp),
+                                )
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .combinedClickable(
+                            onClick = {
+                                if (canSend) {
+                                    onSend()
+                                }
+                            },
+                            onLongClick = {
+                                onInputModeChange(
+                                    if (isShellMode) ChatInputMode.NORMAL else ChatInputMode.SHELL
+                                )
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     if (isSending) {
                         BreathingCircleIndicator(
@@ -6445,14 +6527,21 @@ private fun ChatInputBar(
                     } else {
                         Icon(
                             Icons.AutoMirrored.Filled.Send,
-                            contentDescription = stringResource(R.string.chat_send),
+                            contentDescription = if (isShellMode) {
+                                stringResource(R.string.chat_send_shell)
+                            } else {
+                                stringResource(R.string.chat_send)
+                            },
                             modifier = Modifier.size(20.dp),
                             tint = if (canSend) {
                                 MaterialTheme.colorScheme.primary
+                            } else if (isShellMode && isAmoled && !isSending) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                             }
                         )
+
                     }
                 }
             }

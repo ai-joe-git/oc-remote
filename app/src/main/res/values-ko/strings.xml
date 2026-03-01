@@ -330,7 +330,7 @@
     <string name="sessions_delete_selected_confirm">%1$d개의 세션을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</string>
     <string name="cmd_shell_mode">쉘 모드로 전환</string>
     <string name="chat_input_mode_normal">프롬프트</string>
-    <string name="chat_shell_placeholder">쉘 명령어를 입력하세요…</string>
+    <string name="chat_shell_placeholder">셸 명령어를 입력하세요…</string>
     <string name="chat_shell_executed">쉘 명령어가 전송되었습니다</string>
     <string name="chat_shell_failed">쉘 명령어 실행 실패</string>
     <string name="chat_shell_empty">먼저 쉘 명령어를 입력하세요</string>
@@ -456,4 +456,6 @@
     <string name="home_local_startup_timeout_label">시작 시간 제한</string>
     <string name="home_local_startup_timeout_value">%1$d초</string>
     <string name="home_local_launch_options_title">실행 옵션</string>
+    <string name="chat_send_shell">셸 명령어 보내기</string>
+    <string name="chat_shell_mode_hold_send_hint">셸 모드가 활성화되었습니다. 길게 눌러 보내기로 전환하세요.</string>
 </resources>

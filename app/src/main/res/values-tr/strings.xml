@@ -456,4 +456,6 @@ Token: ~%4$d -&gt; ~%5$d</string>
     <string name="home_local_startup_timeout_label">Başlatma zaman aşımı</string>
     <string name="home_local_startup_timeout_value">%1$d sn</string>
     <string name="home_local_launch_options_title">Başlatma seçenekleri</string>
+    <string name="chat_send_shell">Kabuk komutu gönder</string>
+    <string name="chat_shell_mode_hold_send_hint">Kabuk modu aktif. Geri dönmek için Gönder\'e basılı tutun.</string>
 </resources>

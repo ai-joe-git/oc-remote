@@ -456,4 +456,6 @@ Token: ~%4$d -&gt; ~%5$d</string>
     <string name="home_local_startup_timeout_label">Timeout di avvio</string>
     <string name="home_local_startup_timeout_value">%1$d sec</string>
     <string name="home_local_launch_options_title">Opzioni di avvio</string>
+    <string name="chat_send_shell">Invia comando shell</string>
+    <string name="chat_shell_mode_hold_send_hint">Modalità shell attiva. Tieni premuto Invia per tornare indietro.</string>
 </resources>

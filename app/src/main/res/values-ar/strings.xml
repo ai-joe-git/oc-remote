@@ -330,7 +330,7 @@
     <string name="sessions_delete_selected_confirm">هل تريد حذف %1$d جلسة؟ لا يمكن التراجع عن ذلك.</string>
     <string name="cmd_shell_mode">التبديل إلى وضع الشِل</string>
     <string name="chat_input_mode_normal">الموجه</string>
-    <string name="chat_shell_placeholder">أدخل أمر الشِل…</string>
+    <string name="chat_shell_placeholder">أدخل أمر shell...</string>
     <string name="chat_shell_executed">تم إرسال أمر الشِل</string>
     <string name="chat_shell_failed">فشل تشغيل أمر الشِل</string>
     <string name="chat_shell_empty">يرجى إدخال أمر شِل أولاً</string>
@@ -456,4 +456,6 @@
     <string name="home_local_startup_timeout_label">مدة الانتظار عند بدء التشغيل</string>
     <string name="home_local_startup_timeout_value">%1$d ثانية</string>
     <string name="home_local_launch_options_title">خيارات التشغيل</string>
+    <string name="chat_send_shell">إرسال أمر شِل</string>
+    <string name="chat_shell_mode_hold_send_hint">وضع الشِل نشط. اضغط مع الاستمرار على إرسال للعودة.</string>
 </resources>

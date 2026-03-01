@@ -330,7 +330,7 @@
     <string name="sessions_delete_selected_confirm">Excluir %1$d sessões? Esta ação não pode ser desfeita.</string>
     <string name="cmd_shell_mode">Mudar para o modo shell</string>
     <string name="chat_input_mode_normal">Prompt</string>
-    <string name="chat_shell_placeholder">Digite o comando shell…</string>
+    <string name="chat_shell_placeholder">Digite o comando do shell…</string>
     <string name="chat_shell_executed">Comando shell enviado</string>
     <string name="chat_shell_failed">Falha ao executar comando shell</string>
     <string name="chat_shell_empty">Digite primeiro um comando shell</string>
@@ -456,4 +456,6 @@ Tokens: ~%4$d -&gt; ~%5$d</string>
     <string name="home_local_startup_timeout_label">Tempo limite de inicialização</string>
     <string name="home_local_startup_timeout_value">%1$d seg</string>
     <string name="home_local_launch_options_title">Opções de inicialização</string>
+    <string name="chat_send_shell">Enviar comando shell</string>
+    <string name="chat_shell_mode_hold_send_hint">Modo shell ativo. Mantenha Enviar pressionado para voltar.</string>
 </resources>

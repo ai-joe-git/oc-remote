@@ -330,7 +330,7 @@
     <string name="sessions_delete_selected_confirm">要删除 %1$d 个会话？此操作不可撤销。</string>
     <string name="cmd_shell_mode">切换到 Shell 模式</string>
     <string name="chat_input_mode_normal">提示</string>
-    <string name="chat_shell_placeholder">请输入 Shell 命令…</string>
+    <string name="chat_shell_placeholder">输入 shell 命令…</string>
     <string name="chat_shell_executed">Shell 命令已发送</string>
     <string name="chat_shell_failed">Shell 命令运行失败</string>
     <string name="chat_shell_empty">请先输入 Shell 命令</string>
@@ -456,4 +456,6 @@
     <string name="home_local_startup_timeout_label">启动超时</string>
     <string name="home_local_startup_timeout_value">%1$d 秒</string>
     <string name="home_local_launch_options_title">启动选项</string>
+    <string name="chat_send_shell">发送 Shell 命令</string>
+    <string name="chat_shell_mode_hold_send_hint">Shell 模式已激活。长按发送可切换回原模式。</string>
 </resources>

@@ -456,4 +456,6 @@ Tokeny: ~%4$d -&gt; ~%5$d</string>
     <string name="home_local_startup_timeout_label">Limit czasu uruchamiania</string>
     <string name="home_local_startup_timeout_value">%1$d sek</string>
     <string name="home_local_launch_options_title">Opcje uruchamiania</string>
+    <string name="chat_send_shell">Wyślij polecenie powłoki</string>
+    <string name="chat_shell_mode_hold_send_hint">Tryb powłoki aktywny. Przytrzymaj Wyślij, aby wrócić.</string>
 </resources>

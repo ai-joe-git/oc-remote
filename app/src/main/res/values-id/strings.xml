@@ -462,4 +462,6 @@ Token: ~%4$d -&gt; ~%5$d</string>
     <string name="home_local_startup_timeout_label">Batas waktu startup</string>
     <string name="home_local_startup_timeout_value">%1$d detik</string>
     <string name="home_local_launch_options_title">Opsi peluncuran</string>
+    <string name="chat_send_shell">Kirim perintah shell</string>
+    <string name="chat_shell_mode_hold_send_hint">Mode shell aktif. Tahan Kirim untuk kembali.</string>
 </resources>
