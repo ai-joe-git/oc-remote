@@ -633,7 +633,9 @@ else
     NO_PROXY="$DEFAULT_NO_PROXY"
 fi
 
-export OPENCODE_SERVER_PASSWORD="${OPENCODE_SERVER_PASSWORD:-}"
+if [[ -n "${OPENCODE_SERVER_PASSWORD:-}" ]]; then
+    export OPENCODE_SERVER_PASSWORD
+fi
 if [[ -n "${OPENCODE_SERVER_USERNAME:-}" ]]; then
     export OPENCODE_SERVER_USERNAME
 fi
@@ -648,7 +650,10 @@ if [[ -n "${OPENCODE_PROXY_URL:-}" ]]; then
     export all_proxy="$OPENCODE_PROXY_URL"
 fi
 
-PROXY_EXPORTS="export HOST=\"$HOST\"; export PORT=\"$PORT\"; export OPENCODE_SERVER_PASSWORD=\"${OPENCODE_SERVER_PASSWORD:-}\"; export NO_PROXY=\"$NO_PROXY\"; export no_proxy=\"$NO_PROXY\";"
+PROXY_EXPORTS="export HOST=\"$HOST\"; export PORT=\"$PORT\"; export NO_PROXY=\"$NO_PROXY\"; export no_proxy=\"$NO_PROXY\";"
+if [[ -n "${OPENCODE_SERVER_PASSWORD:-}" ]]; then
+    PROXY_EXPORTS+=" export OPENCODE_SERVER_PASSWORD=\"$OPENCODE_SERVER_PASSWORD\";"
+fi
 if [[ -n "${OPENCODE_SERVER_USERNAME:-}" ]]; then
     PROXY_EXPORTS+=" export OPENCODE_SERVER_USERNAME=\"$OPENCODE_SERVER_USERNAME\";"
 fi
@@ -730,6 +735,13 @@ if [[ $EXIT_CODE -ne 0 ]] && grep -Eiq "resolveerror|cannot find module|module n
 fi
 
 cat "$LOG_FILE" >&2 || true
+if [[ $EXIT_CODE -ne 0 ]]; then
+    OPENCODE_RUNTIME_LOG="$(ls -1t /root/.local/share/opencode/log/*.log 2>/dev/null | head -n 1 || true)"
+    if [[ -n "$OPENCODE_RUNTIME_LOG" ]]; then
+        echo "Latest OpenCode runtime log: $OPENCODE_RUNTIME_LOG" >&2
+        tail -n 120 "$OPENCODE_RUNTIME_LOG" >&2 || true
+    fi
+fi
 exit $EXIT_CODE
 '
 
