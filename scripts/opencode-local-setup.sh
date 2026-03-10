@@ -617,7 +617,7 @@ if command -v curl >/dev/null 2>&1; then
 fi
 
 if [[ -f "$SETUP_SCRIPT" ]]; then
-    bash "$SETUP_SCRIPT" --skip-self-update refresh-runtime >/dev/null 2>&1 || true
+    bash "$SETUP_SCRIPT" refresh-runtime >/dev/null 2>&1 || true
 fi
 
 if [[ -f "$ENV_FILE" ]]; then
