@@ -565,6 +565,7 @@ HOST="127.0.0.1"
 ENV_FILE="$HOME/opencode-local/env"
 SETUP_DIR="$HOME/opencode-local"
 SETUP_SCRIPT="$SETUP_DIR/setup.sh"
+SETUP_REMOTE_URL="https://raw.githubusercontent.com/crim50n/oc-remote/master/scripts/opencode-local-setup.sh"
 CLI_PROXY_URL=""
 CLI_NO_PROXY=""
 CLI_HOST=""
@@ -599,8 +600,24 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if command -v curl >/dev/null 2>&1; then
+    tmp_remote_setup="$(mktemp "$SETUP_DIR/setup.remote.XXXXXX" 2>/dev/null || true)"
+    if [[ -n "$tmp_remote_setup" ]]; then
+        if curl --connect-timeout 4 --max-time 12 -fsSL -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' "$SETUP_REMOTE_URL?ts=$(date +%s)" -o "$tmp_remote_setup" 2>/dev/null; then
+            if grep -q "refresh_runtime_scripts_only" "$tmp_remote_setup"; then
+                mv "$tmp_remote_setup" "$SETUP_SCRIPT"
+                chmod 700 "$SETUP_SCRIPT" || true
+            else
+                rm -f "$tmp_remote_setup"
+            fi
+        else
+            rm -f "$tmp_remote_setup"
+        fi
+    fi
+fi
+
 if [[ -f "$SETUP_SCRIPT" ]]; then
-    bash "$SETUP_SCRIPT" refresh-runtime >/dev/null 2>&1 || true
+    bash "$SETUP_SCRIPT" --skip-self-update refresh-runtime >/dev/null 2>&1 || true
 fi
 
 if [[ -f "$ENV_FILE" ]]; then
