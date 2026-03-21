@@ -291,7 +291,6 @@ class SttManager(private val context: Context) {
                 }
             }
 
-            // whispercpp OpenAI-compatible endpoint at /v1/audio/transcriptions
             val response: WhisperTranscribeResponse = client.submitFormWithBinaryData(
                 url = "$whisperUrl/v1/audio/transcriptions",
                 formData = formData {
@@ -320,29 +319,6 @@ class SttManager(private val context: Context) {
 
     @Serializable
     data class WhisperTranscribeResponse(val text: String?)
-}
-            }
-
-            val response: TranscribeResponse = client.submitFormWithBinaryData(
-                url = "$serverUrl/voice/transcribe",
-                formData = formData {
-                    append("audio", audioBytes, io.ktor.http.Headers.build {
-                        append(HttpHeaders.ContentType, "audio/m4a")
-                        append(HttpHeaders.ContentDisposition, "filename=\"recording.m4a\"")
-                    })
-                }
-            ).body()
-
-            client.close()
-            response.text
-        } catch (e: Exception) {
-            Log.e(TAG, "Server transcription failed", e)
-            withContext(Dispatchers.Main) {
-                onError("Server transcription failed: ${e.message}")
-            }
-            throw e
-        }
-    }
 
     fun release() {
         cancelRecording()
@@ -359,7 +335,4 @@ class SttManager(private val context: Context) {
         outputFile = null
         isRecording = false
     }
-
-    @Serializable
-    data class TranscribeResponse(val text: String)
 }
