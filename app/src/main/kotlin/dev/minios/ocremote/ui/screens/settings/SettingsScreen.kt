@@ -100,6 +100,8 @@ fun SettingsScreen(
     val sttLanguage by viewModel.sttLanguage.collectAsState()
     val sttMaxDuration by viewModel.sttMaxDuration.collectAsState()
     val voiceInputMode by viewModel.voiceInputMode.collectAsState()
+    val whisperUrl by viewModel.whisperUrl.collectAsState()
+    val ttsUrl by viewModel.ttsUrl.collectAsState()
 
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -530,6 +532,17 @@ fun SettingsScreen(
                 }
             )
 
+            // TTS Server URL (shown when TTS is Server mode)
+            if (ttsMode == dev.minios.ocremote.data.repository.SettingsRepository.TtsMode.SERVER) {
+                ListItem(
+                    headlineContent = { Text("TTS Server URL") },
+                    supportingContent = { Text(ttsUrl, maxLines = 1) },
+                    modifier = Modifier.clickable {
+                        // For now, show URL only
+                    }
+                )
+            }
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // STT Mode
@@ -544,6 +557,17 @@ fun SettingsScreen(
                     viewModel.setSttMode(nextMode)
                 }
             )
+
+            // Whisper URL (shown when STT is Server mode)
+            if (sttMode == dev.minios.ocremote.data.repository.SettingsRepository.SttMode.SERVER) {
+                ListItem(
+                    headlineContent = { Text("Whisper Server URL") },
+                    supportingContent = { Text(whisperUrl, maxLines = 1) },
+                    modifier = Modifier.clickable {
+                        // For now, show a simple dialog to edit
+                    }
+                )
+            }
 
             // Voice Input Mode
             ListItem(
