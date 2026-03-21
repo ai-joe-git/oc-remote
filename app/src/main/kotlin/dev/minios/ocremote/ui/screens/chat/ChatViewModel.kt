@@ -469,8 +469,10 @@ class ChatViewModel @Inject constructor(
         }
 
         // Initialize native TTS
-        viewModelScope.launch {
-            ttsManager.initNative()
+        ttsManager.initNative { tts ->
+            if (tts == null) {
+                Log.e(TAG, "Failed to initialize native TTS")
+            }
         }
 
         // Restore draft from disk

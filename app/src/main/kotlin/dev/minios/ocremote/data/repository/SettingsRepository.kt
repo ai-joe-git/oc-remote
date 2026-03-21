@@ -648,15 +648,15 @@ class SettingsRepository @Inject constructor(
 
     // ============ Voice Helpers ============
 
-    suspend fun getNativeTtsVoices(): List<String> = suspendCancellableCoroutine { continuation ->
-        val tts = TextToSpeech(context) { status ->
+    fun getNativeTtsVoices(callback: (List<String>) -> Unit) {
+        val textToSpeech = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                val voices = tts.voices?.map { it.name } ?: emptyList()
-                tts.shutdown()
-                continuation.resume(voices)
+                val voices = textToSpeech.voices?.map { it.name } ?: emptyList()
+                textToSpeech.shutdown()
+                callback(voices)
             } else {
-                tts.shutdown()
-                continuation.resume(emptyList())
+                textToSpeech.shutdown()
+                callback(emptyList())
             }
         }
     }

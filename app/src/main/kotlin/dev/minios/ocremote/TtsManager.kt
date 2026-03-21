@@ -50,25 +50,20 @@ class TtsManager(private val context: Context) {
         audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
 
-    suspend fun initNative(): TextToSpeech = withContext(Dispatchers.Main) {
+    fun initNative(onComplete: (TextToSpeech?) -> Unit) {
         if (nativeTts != null && isNativeInitialized) {
-            return@withContext nativeTts!!
+            onComplete(nativeTts)
+            return
         }
 
-        suspendCancellableCoroutine { continuation ->
-            nativeTts = TextToSpeech(context) { status ->
-                if (status == TextToSpeech.SUCCESS) {
-                    isNativeInitialized = true
-                    Log.d(TAG, "Native TTS initialized successfully")
-                    if (continuation.isActive) {
-                        continuation.resume(nativeTts!!)
-                    }
-                } else {
-                    Log.e(TAG, "Native TTS initialization failed with status: $status")
-                    if (continuation.isActive) {
-                        continuation.resumeWithException(Exception("TTS initialization failed"))
-                    }
-                }
+        nativeTts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                isNativeInitialized = true
+                Log.d(TAG, "Native TTS initialized successfully")
+                onComplete(nativeTts)
+            } else {
+                Log.e(TAG, "Native TTS initialization failed with status: $status")
+                onComplete(null)
             }
         }
     }
