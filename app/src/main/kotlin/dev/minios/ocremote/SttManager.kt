@@ -11,6 +11,7 @@ import android.speech.SpeechRecognizer
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.util.Log
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import dev.minios.ocremote.data.repository.SettingsRepository.MaxRecordingDuration
 import dev.minios.ocremote.data.repository.SettingsRepository.SttMode
@@ -72,7 +73,10 @@ class SttManager(private val context: Context) {
         val permission = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
         Log.d(TAG, "RECORD_AUDIO permission status: $permission")
         if (permission != PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "Permission not granted, calling onError")
+            Log.d(TAG, "Permission not granted, showing toast")
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "Microphone permission required", Toast.LENGTH_SHORT).show()
+            }
             onError("Microphone permission not granted")
             return false
         }
@@ -176,7 +180,10 @@ class SttManager(private val context: Context) {
     fun startNativeRecognition() {
         Log.d(TAG, "startNativeRecognition called")
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            Log.d(TAG, "Speech recognition not available")
+            Log.d(TAG, "Speech recognition not available, showing toast")
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "Speech recognition not available on this device", Toast.LENGTH_SHORT).show()
+            }
             onError("Speech recognition not available")
             return
         }
@@ -184,7 +191,10 @@ class SttManager(private val context: Context) {
         val permission = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
         Log.d(TAG, "RECORD_AUDIO permission status: $permission")
         if (permission != PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "Permission not granted")
+            Log.d(TAG, "Permission not granted, showing toast")
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(context, "Microphone permission required", Toast.LENGTH_SHORT).show()
+            }
             onError("Microphone permission not granted")
             return
         }
