@@ -3,11 +3,12 @@ package dev.minios.ocremote.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.minios.ocremote.data.api.OpenCodeApi
+import dev.minios.ocremote.data.api.ServerConnection
 import dev.minios.ocremote.data.repository.LocalServerManager
 import dev.minios.ocremote.data.repository.SettingsRepository
-import dev.minios.ocremote.data.api.OpenCodeApi
-import dev.minios.ocremote.domain.model.ServerConnection
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
