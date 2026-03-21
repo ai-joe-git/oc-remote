@@ -1178,13 +1178,6 @@ data class ServerPaths(
 // ============ Voice DTOs ============
 
 @Serializable
-data class VoiceInfo(
-    val voiceId: String,
-    val name: String,
-    val language: String? = null
-)
-
-@Serializable
 data class VoiceInfoList(
     val data: List<VoiceInfo> = emptyList()
 )
