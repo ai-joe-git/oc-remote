@@ -1472,12 +1472,17 @@ class ChatViewModel @Inject constructor(
         if (vs.ttsMode == dev.minios.ocremote.data.repository.SettingsRepository.TtsMode.OFF) {
             return
         }
+        val url = if (vs.ttsMode == dev.minios.ocremote.data.repository.SettingsRepository.TtsMode.SERVER) {
+            ttsManager.ttsUrl
+        } else {
+            serverUrl
+        }
         ttsManager.speak(
             text = text,
             mode = vs.ttsMode,
             voice = vs.ttsVoice,
             speed = vs.ttsSpeed,
-            serverUrl = serverUrl
+            serverUrl = url
         )
     }
 

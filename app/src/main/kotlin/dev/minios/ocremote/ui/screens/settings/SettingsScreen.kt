@@ -103,6 +103,11 @@ fun SettingsScreen(
     val whisperUrl by viewModel.whisperUrl.collectAsState()
     val ttsUrl by viewModel.ttsUrl.collectAsState()
 
+    // Voice list for server TTS
+    var availableVoices by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isFetchingVoices by remember { mutableStateOf(false) }
+    var showVoiceDialog by remember { mutableStateOf(false) }
+
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showFontSizeDialog by remember { mutableStateOf(false) }
@@ -492,6 +497,33 @@ fun SettingsScreen(
                 }
             )
 
+            // TTS Voice Selection
+            ListItem(
+                headlineContent = { Text("TTS Voice") },
+                supportingContent = { Text(if (ttsVoice == "default") "Default" else ttsVoice, maxLines = 1) },
+                trailingContent = {
+                    if (isFetchingVoices) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    } else {
+                        IconButton(onClick = {
+                            isFetchingVoices = true
+                            viewModel.fetchTtsVoices { voices ->
+                                availableVoices = voices
+                                isFetchingVoices = false
+                                if (voices.isNotEmpty()) {
+                                    showVoiceDialog = true
+                                }
+                            }
+                        }) {
+                            Icon(Icons.Default.Refresh, "Fetch voices")
+                        }
+                    }
+                },
+                modifier = Modifier.clickable {
+                    showVoiceDialog = true
+                }
+            )
+
             // TTS Speed
             ListItem(
                 headlineContent = { Text("TTS Speed") },
@@ -708,6 +740,36 @@ fun SettingsScreen(
                     viewModel.setLocalServerStartupTimeoutSec(startupTimeoutSec)
                     showLocalLaunchOptionsDialog = false
                 },
+            )
+        }
+
+        // Voice Selection Dialog
+        if (showVoiceDialog) {
+            AlertDialog(
+                onDismissRequest = { showVoiceDialog = false },
+                title = { Text("Select TTS Voice") },
+                text = {
+                    Column {
+                        if (availableVoices.isEmpty()) {
+                            Text("No voices available. Check TTS server connection.")
+                        } else {
+                            availableVoices.forEach { voice ->
+                                ListItem(
+                                    headlineContent = { Text(voice) },
+                                    modifier = Modifier.clickable {
+                                        viewModel.setTtsVoice(voice)
+                                        showVoiceDialog = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showVoiceDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
     }

@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.minios.ocremote.data.repository.LocalServerManager
 import dev.minios.ocremote.data.repository.SettingsRepository
+import dev.minios.ocremote.data.api.OpenCodeApi
+import dev.minios.ocremote.domain.model.ServerConnection
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -12,7 +14,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val api: OpenCodeApi
 ) : ViewModel() {
     
     val appLanguage = settingsRepository.appLanguage.stateIn(
@@ -495,6 +498,19 @@ class SettingsViewModel @Inject constructor(
     fun setTtsUrl(url: String) {
         viewModelScope.launch {
             settingsRepository.setTtsUrl(url)
+        }
+    }
+
+    fun fetchTtsVoices(callback: (List<String>) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val serverUrl = settingsRepository.ttsUrl.first()
+                val conn = ServerConnection.from(serverUrl, null, null)
+                val voices = api.getTtsVoices(conn)
+                callback(voices.map { it.id })
+            } catch (e: Exception) {
+                callback(emptyList())
+            }
         }
     }
 }
