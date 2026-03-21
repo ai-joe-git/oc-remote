@@ -919,6 +919,8 @@ fun ChatScreen(
     var inputMode by rememberSaveable { mutableStateOf(ChatInputMode.NORMAL.name) }
     val isShellMode = inputMode == ChatInputMode.SHELL.name
 
+    val voiceState by viewModel.voiceState.collectAsState()
+
     BackHandler(enabled = isTerminalMode) {
         if (terminalDrawerState.isOpen) {
             coroutineScope.launch { terminalDrawerState.close() }
@@ -1910,7 +1912,13 @@ fun ChatScreen(
                     }
                 },
                 contextWindow = uiState.contextWindow,
-                lastContextTokens = uiState.lastContextTokens
+                lastContextTokens = uiState.lastContextTokens,
+                voiceInputMode = voiceState.voiceInputMode,
+                isRecording = voiceState.isRecording,
+                recordingDurationSeconds = voiceState.recordingDurationSeconds,
+                onStartRecording = { viewModel.startRecording() },
+                onStopRecording = { viewModel.stopRecording() },
+                onCancelRecording = { viewModel.cancelRecording() }
             )
             }
         }
@@ -5989,7 +5997,13 @@ private fun ChatInputBar(
     inputMode: ChatInputMode = ChatInputMode.NORMAL,
     onInputModeChange: (ChatInputMode) -> Unit = {},
     contextWindow: Int = 0,
-    lastContextTokens: Int = 0
+    lastContextTokens: Int = 0,
+    voiceInputMode: dev.minios.ocremote.data.repository.SettingsRepository.VoiceInputMode = dev.minios.ocremote.data.repository.SettingsRepository.VoiceInputMode.OFF,
+    isRecording: Boolean = false,
+    recordingDurationSeconds: Int = 0,
+    onStartRecording: () -> Unit = {},
+    onStopRecording: () -> Unit = {},
+    onCancelRecording: () -> Unit = {}
 ) {
     val isAmoled = isAmoledTheme()
     val isShellMode = inputMode == ChatInputMode.SHELL
@@ -6030,17 +6044,49 @@ private fun ChatInputBar(
         }
     } else emptyList()
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .imePadding()
-    ) {
-        // Thin divider
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-            thickness = 0.5.dp
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding()
+        ) {
+            // Thin divider
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                thickness = 0.5.dp
+            )
+
+            // Recording overlay UI
+            if (isRecording) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Red.copy(alpha = 0.1f))
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FiberManualRecord,
+                        contentDescription = null,
+                        tint = Color.Red,
+                        modifier = Modifier.size(16.dp).padding(end = 4.dp)
+                    )
+                    Text(
+                        text = "Recording ${recordingDurationSeconds}s",
+                        modifier = Modifier.weight(1f),
+                        color = Color.Red,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    LinearProgressIndicator(
+                        progress = { recordingDurationSeconds / 60f },
+                        modifier = Modifier.width(60.dp).padding(horizontal = 8.dp),
+                        color = Color.Red
+                    )
+                    IconButton(onClick = onCancelRecording, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Close, "Cancel recording", tint = Color.Red)
+                    }
+                }
+            }
 
         // Slash command suggestions popup (scrollable, max 40% screen height)
         AnimatedVisibility(
@@ -6347,6 +6393,23 @@ private fun ChatInputBar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
+                        // Mic button for voice input (Talkie Walkie mode)
+                        if (voiceInputMode != dev.minios.ocremote.data.repository.SettingsRepository.VoiceInputMode.OFF) {
+                            IconButton(
+                                onClick = {
+                                    if (isRecording) onStopRecording() else onStartRecording()
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                                    contentDescription = if (isRecording) "Stop recording" else "Start recording",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (isRecording) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+
                         // Attach button (paperclip) — always visible, pinned right, aligned with Send button
                         IconButton(
                             onClick = onAttach,

@@ -18,6 +18,8 @@ import dev.minios.ocremote.data.repository.DraftRepository
 import dev.minios.ocremote.data.repository.EventReducer
 import dev.minios.ocremote.data.repository.SettingsRepository
 import dev.minios.ocremote.domain.model.*
+import dev.minios.ocremote.TtsManager
+import dev.minios.ocremote.SttManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -34,6 +36,23 @@ import java.net.URLDecoder
 import javax.inject.Inject
 
 private const val TAG = "ChatViewModel"
+
+data class VoiceState(
+    val ttsMode: dev.minios.ocremote.data.repository.SettingsRepository.TtsMode = dev.minios.ocremote.data.repository.SettingsRepository.TtsMode.NATIVE,
+    val ttsVoice: String = "default",
+    val ttsSpeed: Float = 1.0f,
+    val ttsAutoPlay: Boolean = true,
+    val ttsAudioOutput: dev.minios.ocremote.data.repository.SettingsRepository.AudioOutput = dev.minios.ocremote.data.repository.SettingsRepository.AudioOutput.SPEAKER,
+
+    val sttMode: dev.minios.ocremote.data.repository.SettingsRepository.SttMode = dev.minios.ocremote.data.repository.SettingsRepository.SttMode.NATIVE,
+    val sttLanguage: String = "en-US",
+    val sttMaxDuration: dev.minios.ocremote.data.repository.SettingsRepository.MaxRecordingDuration = dev.minios.ocremote.data.repository.SettingsRepository.MaxRecordingDuration.S60,
+    val voiceInputMode: dev.minios.ocremote.data.repository.SettingsRepository.VoiceInputMode = dev.minios.ocremote.data.repository.SettingsRepository.VoiceInputMode.TALKWIE,
+
+    val isRecording: Boolean = false,
+    val recordingDurationSeconds: Int = 0,
+    val isSpeaking: Boolean = false
+)
 
 data class ChatUiState(
     val sessionTitle: String = "",
@@ -68,7 +87,8 @@ data class ChatUiState(
     /** Context window size of the current model (0 if unknown). */
     val contextWindow: Int = 0,
     /** Total tokens from the last assistant message with output > 0 (current context usage). */
-    val lastContextTokens: Int = 0
+    val lastContextTokens: Int = 0,
+    val voiceState: VoiceState = VoiceState()
 )
 
 data class RevertedDraftPayload(
@@ -94,7 +114,8 @@ class ChatViewModel @Inject constructor(
     private val eventReducer: EventReducer,
     private val api: OpenCodeApi,
     private val draftRepository: DraftRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context
 ) : ViewModel() {
 
     private val serverUrl: String = URLDecoder.decode(
@@ -117,6 +138,11 @@ class ChatViewModel @Inject constructor(
     )
 
     private val conn = ServerConnection.from(serverUrl, username, password.ifEmpty { null })
+
+    // Voice managers - initialized in init
+    private lateinit var ttsManager: TtsManager
+    private lateinit var sttManager: SttManager
+    private var recordingDurationJob: Job? = null
 
     private val _isLoading = MutableStateFlow(true)
     private val _error = MutableStateFlow<String?>(null)
@@ -207,6 +233,24 @@ class ChatViewModel @Inject constructor(
     private val _hasOlderMessages = MutableStateFlow(false)
     /** Whether a "load older" request is in flight. */
     private val _isLoadingOlder = MutableStateFlow(false)
+
+    // ============ Voice State ============
+    private val _voiceState = MutableStateFlow(VoiceState())
+    val voiceState: StateFlow<VoiceState> = _voiceState
+
+    private lateinit var ttsManager: TtsManager
+    private lateinit var sttManager: SttManager
+    private var recordingDurationJob: Job? = null
+
+    private val SettingsRepository.ttsMode get() = settingsRepository.ttsMode
+    private val SettingsRepository.ttsVoice get() = settingsRepository.ttsVoice
+    private val SettingsRepository.ttsSpeed get() = settingsRepository.ttsSpeed
+    private val SettingsRepository.ttsAutoPlay get() = settingsRepository.ttsAutoPlay
+    private val SettingsRepository.ttsAudioOutput get() = settingsRepository.ttsAudioOutput
+    private val SettingsRepository.sttMode get() = settingsRepository.sttMode
+    private val SettingsRepository.sttLanguage get() = settingsRepository.sttLanguage
+    private val SettingsRepository.sttMaxDuration get() = settingsRepository.sttMaxDuration
+    private val SettingsRepository.voiceInputMode get() = settingsRepository.voiceInputMode
 
     val uiState: StateFlow<ChatUiState> = combine(
         eventReducer.sessions,
@@ -382,6 +426,57 @@ class ChatViewModel @Inject constructor(
     )
 
     init {
+        // Initialize voice managers
+        ttsManager = TtsManager(appContext)
+        sttManager = SttManager(appContext)
+
+        // Setup TTS callbacks
+        ttsManager.onStart = {
+            _voiceState.value = _voiceState.value.copy(isSpeaking = true)
+        }
+        ttsManager.onDone = {
+            _voiceState.value = _voiceState.value.copy(isSpeaking = false)
+        }
+        ttsManager.onError = { error ->
+            _voiceState.value = _voiceState.value.copy(isSpeaking = false)
+            Log.e(TAG, "TTS error: $error")
+        }
+
+        // Setup STT callbacks
+        sttManager.onRecordingStarted = {
+            _voiceState.value = _voiceState.value.copy(isRecording = true)
+            startRecordingDurationTimer()
+        }
+        sttManager.onRecordingStopped = { audioBytes ->
+            _voiceState.value = _voiceState.value.copy(isRecording = false)
+            stopRecordingDurationTimer()
+        }
+        sttManager.onFinalResult = { text ->
+            _voiceState.value = _voiceState.value.copy(isRecording = false)
+            stopRecordingDurationTimer()
+            if (text.isNotBlank()) {
+                sendMessage(text)
+            }
+        }
+        sttManager.onPartialResult = { text ->
+            Log.d(TAG, "STT partial result: $text")
+        }
+        sttManager.onError = { error ->
+            _voiceState.value = _voiceState.value.copy(isRecording = false)
+            stopRecordingDurationTimer()
+            Log.e(TAG, "STT error: $error")
+        }
+        sttManager.onMaxDurationReached = {
+            _voiceState.value = _voiceState.value.copy(isRecording = false)
+            stopRecordingDurationTimer()
+            Log.d(TAG, "Max recording duration reached")
+        }
+
+        // Initialize native TTS
+        viewModelScope.launch {
+            ttsManager.initNative()
+        }
+
         // Restore draft from disk
         val draft = draftRepository.getDraft(sessionId)
         if (draft != null) {
@@ -395,6 +490,61 @@ class ChatViewModel @Inject constructor(
             }
             if (!draft.selectedVariant.isNullOrBlank()) {
                 _selectedVariant.value = draft.selectedVariant
+            }
+        }
+
+        // Collect voice settings
+        viewModelScope.launch {
+            settingsRepository.ttsMode.collect { mode ->
+                _voiceState.value = _voiceState.value.copy(ttsMode = mode)
+                ttsManager.currentMode = mode
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.ttsVoice.collect { voice ->
+                _voiceState.value = _voiceState.value.copy(ttsVoice = voice)
+                ttsManager.currentVoice = voice
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.ttsSpeed.collect { speed ->
+                _voiceState.value = _voiceState.value.copy(ttsSpeed = speed)
+                ttsManager.currentSpeed = speed
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.ttsAutoPlay.collect { autoPlay ->
+                _voiceState.value = _voiceState.value.copy(ttsAutoPlay = autoPlay)
+                ttsManager.autoPlay = autoPlay
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.ttsAudioOutput.collect { output ->
+                _voiceState.value = _voiceState.value.copy(ttsAudioOutput = output)
+                ttsManager.audioOutput = output
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.sttMode.collect { mode ->
+                _voiceState.value = _voiceState.value.copy(sttMode = mode)
+                sttManager.currentMode = mode
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.sttLanguage.collect { language ->
+                _voiceState.value = _voiceState.value.copy(sttLanguage = language)
+                sttManager.language = language
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.sttMaxDuration.collect { maxDuration ->
+                _voiceState.value = _voiceState.value.copy(sttMaxDuration = maxDuration)
+                sttManager.maxDurationMs = (maxDuration.seconds ?: 0) * 1000
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.voiceInputMode.collect { mode ->
+                _voiceState.value = _voiceState.value.copy(voiceInputMode = mode)
             }
         }
 
@@ -1250,6 +1400,96 @@ class ChatViewModel @Inject constructor(
             .filterIsInstance<Part.Text>()
             .joinToString("") { it.text }
             .ifBlank { null }
+    }
+
+    // ============ Voice Functions ============
+
+    fun startRecording() {
+        val vs = _voiceState.value
+        if (vs.voiceInputMode == dev.minios.ocremote.data.repository.SettingsRepository.VoiceInputMode.OFF) {
+            return
+        }
+
+        when (vs.sttMode) {
+            dev.minios.ocremote.data.repository.SettingsRepository.SttMode.NATIVE -> {
+                sttManager.startNativeRecognition()
+            }
+            dev.minios.ocremote.data.repository.SettingsRepository.SttMode.SERVER -> {
+                sttManager.startRecording()
+            }
+            dev.minios.ocremote.data.repository.SettingsRepository.SttMode.OFF -> {
+                // Do nothing
+            }
+        }
+    }
+
+    fun stopRecording() {
+        val vs = _voiceState.value
+        if (vs.sttMode == dev.minios.ocremote.data.repository.SettingsRepository.SttMode.SERVER) {
+            viewModelScope.launch {
+                val audioBytes = sttManager.stopRecording()
+                if (audioBytes.isNotEmpty()) {
+                    try {
+                        val text = api.transcribeAudio(conn, audioBytes)
+                        if (text.isNotBlank()) {
+                            sendMessage(text)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Server transcription failed", e)
+                    }
+                }
+            }
+        } else if (vs.sttMode == dev.minios.ocremote.data.repository.SettingsRepository.SttMode.NATIVE) {
+            sttManager.stopNativeRecognition()
+        }
+    }
+
+    fun cancelRecording() {
+        sttManager.cancelRecording()
+        stopRecordingDurationTimer()
+    }
+
+    fun speakText(text: String) {
+        val vs = _voiceState.value
+        if (vs.ttsMode == dev.minios.ocremote.data.repository.SettingsRepository.TtsMode.OFF) {
+            return
+        }
+        ttsManager.speak(
+            text = text,
+            mode = vs.ttsMode,
+            voice = vs.ttsVoice,
+            speed = vs.ttsSpeed,
+            serverUrl = serverUrl
+        )
+    }
+
+    fun stopSpeaking() {
+        ttsManager.stop()
+    }
+
+    private fun startRecordingDurationTimer() {
+        recordingDurationJob?.cancel()
+        recordingDurationJob = viewModelScope.launch {
+            var seconds = 0
+            while (true) {
+                delay(1000)
+                seconds++
+                _voiceState.value = _voiceState.value.copy(recordingDurationSeconds = seconds)
+            }
+        }
+    }
+
+    private fun stopRecordingDurationTimer() {
+        recordingDurationJob?.cancel()
+        recordingDurationJob = null
+        _voiceState.value = _voiceState.value.copy(recordingDurationSeconds = 0)
+    }
+
+    override fun onCleared() {
+        ttsManager.release()
+        sttManager.release()
+        recordingDurationJob?.cancel()
+        super.onCleared()
     }
 }
 

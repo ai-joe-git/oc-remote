@@ -1,6 +1,10 @@
 package dev.minios.ocremote.data.repository
 
 import android.content.Context
+import android.media.AudioManager
+import android.os.Build
+import android.speech.tts.TextToSpeech
+import android.speech.tts.Voice
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -9,10 +13,19 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.http.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.Serializable
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * App-wide settings stored in DataStore.
@@ -54,6 +67,16 @@ class SettingsRepository @Inject constructor(
         private val LOCAL_SERVER_RUN_IN_BACKGROUND_KEY = booleanPreferencesKey("local_server_run_in_background")
         private val LOCAL_SERVER_AUTO_START_KEY = booleanPreferencesKey("local_server_auto_start")
         private val LOCAL_SERVER_STARTUP_TIMEOUT_SEC_KEY = intPreferencesKey("local_server_startup_timeout_sec")
+
+        private val TTS_MODE_KEY = stringPreferencesKey("tts_mode")
+        private val TTS_VOICE_KEY = stringPreferencesKey("tts_voice")
+        private val TTS_SPEED_KEY = floatPreferencesKey("tts_speed")
+        private val TTS_AUTO_PLAY_KEY = booleanPreferencesKey("tts_auto_play")
+        private val TTS_AUDIO_OUTPUT_KEY = stringPreferencesKey("tts_audio_output")
+        private val STT_MODE_KEY = stringPreferencesKey("stt_mode")
+        private val STT_LANGUAGE_KEY = stringPreferencesKey("stt_language")
+        private val STT_MAX_DURATION_KEY = stringPreferencesKey("stt_max_duration")
+        private val VOICE_INPUT_MODE_KEY = stringPreferencesKey("voice_input_mode")
 
         /** SharedPreferences name used for synchronous locale reads in attachBaseContext. */
         private const val LOCALE_PREFS = "locale_prefs"
@@ -509,5 +532,145 @@ class SettingsRepository @Inject constructor(
                 current + key
             }
         }
+    }
+
+    // ============ Voice / TTS Settings ============
+
+    enum class TtsMode { OFF, NATIVE, SERVER }
+    enum class SttMode { OFF, NATIVE, SERVER }
+    enum class VoiceInputMode { OFF, TALKWIE, FULL }
+    enum class AudioOutput { SPEAKER, EARPIECE }
+    enum class MaxRecordingDuration(val seconds: Int?) {
+        OFF(null),
+        S15(15),
+        S30(30),
+        S60(60),
+        S120(120);
+
+        companion object {
+            fun fromString(value: String): MaxRecordingDuration {
+                return entries.find { it.name == value } ?: S60
+            }
+        }
+    }
+
+    val ttsMode: Flow<TtsMode> = dataStore.data.map { preferences ->
+        preferences[TTS_MODE_KEY]?.let { TtsMode.valueOf(it) } ?: TtsMode.NATIVE
+    }
+
+    suspend fun setTtsMode(mode: TtsMode) {
+        dataStore.edit { preferences ->
+            preferences[TTS_MODE_KEY] = mode.name
+        }
+    }
+
+    val ttsVoice: Flow<String> = dataStore.data.map { preferences ->
+        preferences[TTS_VOICE_KEY] ?: "default"
+    }
+
+    suspend fun setTtsVoice(voice: String) {
+        dataStore.edit { preferences ->
+            preferences[TTS_VOICE_KEY] = voice
+        }
+    }
+
+    val ttsSpeed: Flow<Float> = dataStore.data.map { preferences ->
+        (preferences[TTS_SPEED_KEY] ?: 1.0f).coerceIn(0.5f, 2.0f)
+    }
+
+    suspend fun setTtsSpeed(speed: Float) {
+        dataStore.edit { preferences ->
+            preferences[TTS_SPEED_KEY] = speed.coerceIn(0.5f, 2.0f)
+        }
+    }
+
+    val ttsAutoPlay: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[TTS_AUTO_PLAY_KEY] ?: true
+    }
+
+    suspend fun setTtsAutoPlay(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[TTS_AUTO_PLAY_KEY] = enabled
+        }
+    }
+
+    val ttsAudioOutput: Flow<AudioOutput> = dataStore.data.map { preferences ->
+        preferences[TTS_AUDIO_OUTPUT_KEY]?.let { AudioOutput.valueOf(it) } ?: AudioOutput.SPEAKER
+    }
+
+    suspend fun setTtsAudioOutput(output: AudioOutput) {
+        dataStore.edit { preferences ->
+            preferences[TTS_AUDIO_OUTPUT_KEY] = output.name
+        }
+    }
+
+    // ============ Voice / STT Settings ============
+
+    val sttMode: Flow<SttMode> = dataStore.data.map { preferences ->
+        preferences[STT_MODE_KEY]?.let { SttMode.valueOf(it) } ?: SttMode.NATIVE
+    }
+
+    suspend fun setSttMode(mode: SttMode) {
+        dataStore.edit { preferences ->
+            preferences[STT_MODE_KEY] = mode.name
+        }
+    }
+
+    val sttLanguage: Flow<String> = dataStore.data.map { preferences ->
+        preferences[STT_LANGUAGE_KEY] ?: "en-US"
+    }
+
+    suspend fun setSttLanguage(language: String) {
+        dataStore.edit { preferences ->
+            preferences[STT_LANGUAGE_KEY] = language
+        }
+    }
+
+    val sttMaxDuration: Flow<MaxRecordingDuration> = dataStore.data.map { preferences ->
+        preferences[STT_MAX_DURATION_KEY]?.let { MaxRecordingDuration.fromString(it) } ?: MaxRecordingDuration.S60
+    }
+
+    suspend fun setSttMaxDuration(maxDuration: MaxRecordingDuration) {
+        dataStore.edit { preferences ->
+            preferences[STT_MAX_DURATION_KEY] = maxDuration.name
+        }
+    }
+
+    val voiceInputMode: Flow<VoiceInputMode> = dataStore.data.map { preferences ->
+        preferences[VOICE_INPUT_MODE_KEY]?.let { VoiceInputMode.valueOf(it) } ?: VoiceInputMode.TALKWIE
+    }
+
+    suspend fun setVoiceInputMode(mode: VoiceInputMode) {
+        dataStore.edit { preferences ->
+            preferences[VOICE_INPUT_MODE_KEY] = mode.name
+        }
+    }
+
+    // ============ Voice Helpers ============
+
+    suspend fun getNativeTtsVoices(): List<String> = suspendCancellableCoroutine { continuation ->
+        val tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val voices = tts.voices?.map { it.name } ?: emptyList()
+                tts.shutdown()
+                continuation.resume(voices)
+            } else {
+                tts.shutdown()
+                continuation.resume(emptyList())
+            }
+        }
+    }
+
+    suspend fun getServerTtsVoices(serverUrl: String): List<String> {
+        return withTimeoutOrNull(5000L) {
+            try {
+                val httpClient = HttpClient()
+                val response: dev.minios.ocremote.data.api.VoiceInfoList = httpClient.get("$serverUrl/voice/voices")
+                httpClient.close()
+                response.voices.map { it.voiceId }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } ?: emptyList()
     }
 }

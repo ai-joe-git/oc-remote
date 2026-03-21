@@ -852,6 +852,39 @@ class OpenCodeApi @Inject constructor(
             parameter("path", path)
         }.body()
     }
+
+    // ============ Voice / TTS / STT ============
+
+    suspend fun getTtsVoices(conn: ServerConnection): List<VoiceInfo> {
+        return httpClient.get("${conn.baseUrl}/voice/voices") {
+            conn.authHeader?.let { header("Authorization", it) }
+        }.body()
+    }
+
+    suspend fun synthesizeSpeech(conn: ServerConnection, text: String, voice: String): ByteArray {
+        val response = httpClient.post("${conn.baseUrl}/voice/synthesize") {
+            conn.authHeader?.let { header("Authorization", it) }
+            contentType(ContentType.Application.Json)
+            setBody(VoiceSynthesizeRequest(text = text, voice = voice))
+        }
+        return response.body()
+    }
+
+    suspend fun transcribeAudio(conn: ServerConnection, audioBytes: ByteArray, filename: String = "recording.m4a"): String {
+        val response = httpClient.submitFormWithBinaryData(
+            url = "${conn.baseUrl}/voice/transcribe",
+            formData = formData {
+                append("audio", audioBytes, Headers.build {
+                    append(HttpHeaders.ContentType, "audio/m4a")
+                    append(HttpHeaders.ContentDisposition, "filename=\"$filename\"")
+                })
+            }
+        ) {
+            conn.authHeader?.let { header("Authorization", it) }
+        }
+        val result: VoiceTranscribeResponse = response.body()
+        return result.text
+    }
 }
 
 class PtySocket(
@@ -1145,4 +1178,29 @@ data class ServerPaths(
     val config: String = "",
     val worktree: String = "",
     val directory: String = ""
+)
+
+// ============ Voice DTOs ============
+
+@Serializable
+data class VoiceInfo(
+    val voiceId: String,
+    val name: String,
+    val language: String? = null
+)
+
+@Serializable
+data class VoiceInfoList(
+    val voices: List<VoiceInfo>
+)
+
+@Serializable
+data class VoiceSynthesizeRequest(
+    val text: String,
+    val voice: String
+)
+
+@Serializable
+data class VoiceTranscribeResponse(
+    val text: String
 )

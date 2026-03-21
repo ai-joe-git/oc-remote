@@ -189,6 +189,60 @@ class SettingsViewModel @Inject constructor(
         initialValue = 30,
     )
 
+    val ttsMode = settingsRepository.ttsMode.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = SettingsRepository.TtsMode.NATIVE,
+    )
+
+    val ttsVoice = settingsRepository.ttsVoice.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = "default",
+    )
+
+    val ttsSpeed = settingsRepository.ttsSpeed.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 1.0f,
+    )
+
+    val ttsAutoPlay = settingsRepository.ttsAutoPlay.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = true,
+    )
+
+    val ttsAudioOutput = settingsRepository.ttsAudioOutput.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = SettingsRepository.AudioOutput.SPEAKER,
+    )
+
+    val sttMode = settingsRepository.sttMode.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = SettingsRepository.SttMode.NATIVE,
+    )
+
+    val sttLanguage = settingsRepository.sttLanguage.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = "en-US",
+    )
+
+    val sttMaxDuration = settingsRepository.sttMaxDuration.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = SettingsRepository.MaxRecordingDuration.S60,
+    )
+
+    val voiceInputMode = settingsRepository.voiceInputMode.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = SettingsRepository.VoiceInputMode.TALKWIE,
+    )
+
     fun setLanguage(languageCode: String) {
         viewModelScope.launch {
             settingsRepository.setAppLanguage(languageCode)
@@ -363,6 +417,60 @@ class SettingsViewModel @Inject constructor(
     fun setLocalServerStartupTimeoutSec(value: Int) {
         viewModelScope.launch {
             settingsRepository.setLocalServerStartupTimeoutSec(value)
+        }
+    }
+
+    fun setTtsMode(mode: SettingsRepository.TtsMode) {
+        viewModelScope.launch {
+            settingsRepository.setTtsMode(mode)
+        }
+    }
+
+    fun setTtsVoice(voice: String) {
+        viewModelScope.launch {
+            settingsRepository.setTtsVoice(voice)
+        }
+    }
+
+    fun setTtsSpeed(speed: Float) {
+        viewModelScope.launch {
+            settingsRepository.setTtsSpeed(speed)
+        }
+    }
+
+    fun setTtsAutoPlay(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setTtsAutoPlay(enabled)
+        }
+    }
+
+    fun setTtsAudioOutput(output: SettingsRepository.AudioOutput) {
+        viewModelScope.launch {
+            settingsRepository.setTtsAudioOutput(output)
+        }
+    }
+
+    fun setSttMode(mode: SettingsRepository.SttMode) {
+        viewModelScope.launch {
+            settingsRepository.setSttMode(mode)
+        }
+    }
+
+    fun setSttLanguage(language: String) {
+        viewModelScope.launch {
+            settingsRepository.setSttLanguage(language)
+        }
+    }
+
+    fun setSttMaxDuration(maxDuration: SettingsRepository.MaxRecordingDuration) {
+        viewModelScope.launch {
+            settingsRepository.setSttMaxDuration(maxDuration)
+        }
+    }
+
+    fun setVoiceInputMode(mode: SettingsRepository.VoiceInputMode) {
+        viewModelScope.launch {
+            settingsRepository.setVoiceInputMode(mode)
         }
     }
 }

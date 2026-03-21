@@ -91,6 +91,16 @@ fun SettingsScreen(
     val localServerAutoStart by viewModel.localServerAutoStart.collectAsState()
     val localServerStartupTimeoutSec by viewModel.localServerStartupTimeoutSec.collectAsState()
 
+    val ttsMode by viewModel.ttsMode.collectAsState()
+    val ttsVoice by viewModel.ttsVoice.collectAsState()
+    val ttsSpeed by viewModel.ttsSpeed.collectAsState()
+    val ttsAutoPlay by viewModel.ttsAutoPlay.collectAsState()
+    val ttsAudioOutput by viewModel.ttsAudioOutput.collectAsState()
+    val sttMode by viewModel.sttMode.collectAsState()
+    val sttLanguage by viewModel.sttLanguage.collectAsState()
+    val sttMaxDuration by viewModel.sttMaxDuration.collectAsState()
+    val voiceInputMode by viewModel.voiceInputMode.collectAsState()
+
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showFontSizeDialog by remember { mutableStateOf(false) }
@@ -460,6 +470,104 @@ fun SettingsScreen(
                     )
                 },
                 modifier = Modifier.clickable { viewModel.setSilentNotifications(!silentNotifications) }
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            // ======== Voice Settings ========
+            SectionHeader("Voice Settings")
+
+            // TTS Mode
+            ListItem(
+                headlineContent = { Text("Text-to-Speech (TTS)") },
+                supportingContent = { Text(ttsMode.name) },
+                modifier = Modifier.clickable {
+                    val nextMode = dev.minios.ocremote.data.repository.SettingsRepository.TtsMode.entries.let { modes ->
+                        val currentIndex = modes.indexOf(ttsMode)
+                        modes[(currentIndex + 1) % modes.size]
+                    }
+                    viewModel.setTtsMode(nextMode)
+                }
+            )
+
+            // TTS Speed
+            ListItem(
+                headlineContent = { Text("TTS Speed") },
+                supportingContent = { Text(String.format("%.1fx", ttsSpeed)) },
+                modifier = Modifier.clickable {
+                    val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+                    val currentIndex = speeds.indexOfFirst { it >= ttsSpeed }.coerceAtLeast(0)
+                    val nextIndex = (currentIndex + 1) % speeds.size
+                    viewModel.setTtsSpeed(speeds[nextIndex])
+                }
+            )
+
+            // TTS Auto-play
+            ListItem(
+                headlineContent = { Text("TTS Auto-play") },
+                supportingContent = { Text("Automatically speak assistant responses") },
+                trailingContent = {
+                    Switch(
+                        checked = ttsAutoPlay,
+                        onCheckedChange = { viewModel.setTtsAutoPlay(it) },
+                        colors = switchColors
+                    )
+                },
+                modifier = Modifier.clickable { viewModel.setTtsAutoPlay(!ttsAutoPlay) }
+            )
+
+            // TTS Audio Output
+            ListItem(
+                headlineContent = { Text("TTS Audio Output") },
+                supportingContent = { Text(if (ttsAudioOutput == dev.minios.ocremote.data.repository.SettingsRepository.AudioOutput.SPEAKER) "Speaker" else "Earpiece") },
+                modifier = Modifier.clickable {
+                    val nextOutput = if (ttsAudioOutput == dev.minios.ocremote.data.repository.SettingsRepository.AudioOutput.SPEAKER) {
+                        dev.minios.ocremote.data.repository.SettingsRepository.AudioOutput.EARPIECE
+                    } else {
+                        dev.minios.ocremote.data.repository.SettingsRepository.AudioOutput.SPEAKER
+                    }
+                    viewModel.setTtsAudioOutput(nextOutput)
+                }
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+            // STT Mode
+            ListItem(
+                headlineContent = { Text("Speech-to-Text (STT)") },
+                supportingContent = { Text(sttMode.name) },
+                modifier = Modifier.clickable {
+                    val nextMode = dev.minios.ocremote.data.repository.SettingsRepository.SttMode.entries.let { modes ->
+                        val currentIndex = modes.indexOf(sttMode)
+                        modes[(currentIndex + 1) % modes.size]
+                    }
+                    viewModel.setSttMode(nextMode)
+                }
+            )
+
+            // Voice Input Mode
+            ListItem(
+                headlineContent = { Text("Voice Input Mode") },
+                supportingContent = { Text(voiceInputMode.name) },
+                modifier = Modifier.clickable {
+                    val nextMode = dev.minios.ocremote.data.repository.SettingsRepository.VoiceInputMode.entries.let { modes ->
+                        val currentIndex = modes.indexOf(voiceInputMode)
+                        modes[(currentIndex + 1) % modes.size]
+                    }
+                    viewModel.setVoiceInputMode(nextMode)
+                }
+            )
+
+            // STT Max Duration
+            ListItem(
+                headlineContent = { Text("Max Recording Duration") },
+                supportingContent = { Text(sttMaxDuration.seconds?.let { "${it}s" } ?: "OFF") },
+                modifier = Modifier.clickable {
+                    val durations = dev.minios.ocremote.data.repository.SettingsRepository.MaxRecordingDuration.entries
+                    val currentIndex = durations.indexOf(sttMaxDuration)
+                    val nextIndex = (currentIndex + 1) % durations.size
+                    viewModel.setSttMaxDuration(durations[nextIndex])
+                }
             )
 
         }
