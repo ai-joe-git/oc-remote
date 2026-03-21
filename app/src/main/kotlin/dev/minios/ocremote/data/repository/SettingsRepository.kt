@@ -665,7 +665,7 @@ class SettingsRepository @Inject constructor(
         return withTimeoutOrNull(5000L) {
             try {
                 val httpClient = HttpClient()
-                val response: dev.minios.ocremote.data.api.VoiceInfoList = httpClient.get("$serverUrl/voice/voices")
+                val response: dev.minios.ocremote.data.api.VoiceInfoList = httpClient.get("$serverUrl/voice/voices").body()
                 httpClient.close()
                 response.voices.map { it.voiceId }
             } catch (e: Exception) {

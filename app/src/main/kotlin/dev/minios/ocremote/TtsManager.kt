@@ -18,8 +18,6 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.guava.resume
-import kotlinx.coroutines.guava.resumeWithException
 import kotlinx.serialization.Serializable
 import java.io.File
 import java.io.FileOutputStream
@@ -52,18 +50,24 @@ class TtsManager(private val context: Context) {
         audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
 
-    suspend fun initNative(): TextToSpeech = suspendCancellableCoroutine { continuation ->
-        nativeTts = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                isNativeInitialized = true
-                Log.d(TAG, "Native TTS initialized successfully")
-                if (continuation.isActive) {
-                    continuation.resume(nativeTts!!)
-                }
-            } else {
-                Log.e(TAG, "Native TTS initialization failed with status: $status")
-                if (continuation.isActive) {
-                    continuation.resumeWithException(Exception("TTS initialization failed"))
+    suspend fun initNative(): TextToSpeech = withContext(Dispatchers.Main) {
+        if (nativeTts != null && isNativeInitialized) {
+            return@withContext nativeTts!!
+        }
+
+        suspendCancellableCoroutine { continuation ->
+            nativeTts = TextToSpeech(context) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    isNativeInitialized = true
+                    Log.d(TAG, "Native TTS initialized successfully")
+                    if (continuation.isActive) {
+                        continuation.resume(nativeTts!!)
+                    }
+                } else {
+                    Log.e(TAG, "Native TTS initialization failed with status: $status")
+                    if (continuation.isActive) {
+                        continuation.resumeWithException(Exception("TTS initialization failed"))
+                    }
                 }
             }
         }

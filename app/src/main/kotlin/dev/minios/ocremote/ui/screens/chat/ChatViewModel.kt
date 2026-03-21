@@ -238,10 +238,6 @@ class ChatViewModel @Inject constructor(
     private val _voiceState = MutableStateFlow(VoiceState())
     val voiceState: StateFlow<VoiceState> = _voiceState
 
-    private lateinit var ttsManager: TtsManager
-    private lateinit var sttManager: SttManager
-    private var recordingDurationJob: Job? = null
-
     private val SettingsRepository.ttsMode get() = settingsRepository.ttsMode
     private val SettingsRepository.ttsVoice get() = settingsRepository.ttsVoice
     private val SettingsRepository.ttsSpeed get() = settingsRepository.ttsSpeed
@@ -884,6 +880,9 @@ class ChatViewModel @Inject constructor(
 
     override fun onCleared() {
         closeTerminalSession()
+        ttsManager.release()
+        sttManager.release()
+        recordingDurationJob?.cancel()
         super.onCleared()
         saveDraft()
     }
@@ -1483,13 +1482,6 @@ class ChatViewModel @Inject constructor(
         recordingDurationJob?.cancel()
         recordingDurationJob = null
         _voiceState.value = _voiceState.value.copy(recordingDurationSeconds = 0)
-    }
-
-    override fun onCleared() {
-        ttsManager.release()
-        sttManager.release()
-        recordingDurationJob?.cancel()
-        super.onCleared()
     }
 }
 

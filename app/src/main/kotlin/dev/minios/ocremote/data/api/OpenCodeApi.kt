@@ -11,6 +11,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.HttpMethod
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.close
 import io.ktor.websocket.Frame
@@ -871,16 +872,17 @@ class OpenCodeApi @Inject constructor(
     }
 
     suspend fun transcribeAudio(conn: ServerConnection, audioBytes: ByteArray, filename: String = "recording.m4a"): String {
-        val response = httpClient.submitFormWithBinaryData(
-            url = "${conn.baseUrl}/voice/transcribe",
-            formData = formData {
-                append("audio", audioBytes, Headers.build {
-                    append(HttpHeaders.ContentType, "audio/m4a")
-                    append(HttpHeaders.ContentDisposition, "filename=\"$filename\"")
-                })
-            }
-        ) {
+        val response = httpClient.post("${conn.baseUrl}/voice/transcribe") {
             conn.authHeader?.let { header("Authorization", it) }
+            contentType(ContentType.MultiPart.FormData)
+            setBody(MultiPartFormDataContent(
+                formData {
+                    append("audio", audioBytes, Headers.build {
+                        append(HttpHeaders.ContentType, "audio/m4a")
+                        append(HttpHeaders.ContentDisposition, "filename=\"$filename\"")
+                    })
+                }
+            ))
         }
         val result: VoiceTranscribeResponse = response.body()
         return result.text

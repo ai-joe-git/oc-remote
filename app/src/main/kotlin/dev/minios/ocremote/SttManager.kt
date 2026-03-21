@@ -191,6 +191,13 @@ class SttManager(private val context: Context) {
                     Log.d(TAG, "Speech recognition ended")
                 }
 
+                override fun onRmsChanged(rmsdB: Float) {
+                    // Not used
+                }
+
+                override fun onBufferReceived(buffer: ByteArray?) {
+                }
+
                 override fun onPartialResults(partialResults: android.os.Bundle?) {
                     val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     matches?.firstOrNull()?.let { result ->
@@ -227,7 +234,6 @@ class SttManager(private val context: Context) {
                     }
                 }
 
-                override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
             })
 
