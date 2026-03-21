@@ -81,7 +81,7 @@ class TtsManager(private val context: Context) {
 
         val tts = nativeTts ?: return
 
-        setAudioOutput(audioOutput)
+        routeAudioOutput(audioOutput)
 
         tts.setSpeechRate(speed)
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -153,7 +153,7 @@ class TtsManager(private val context: Context) {
     private fun playAudioBytes(audioBytes: ByteArray) {
         try {
             stopCurrentPlayback()
-            setAudioOutput(audioOutput)
+            routeAudioOutput(audioOutput)
 
             val tempFile = File.createTempFile("tts_", ".wav", context.cacheDir)
             FileOutputStream(tempFile).use { it.write(audioBytes) }
@@ -261,7 +261,7 @@ class TtsManager(private val context: Context) {
         )
     }
 
-    private fun setAudioOutput(output: AudioOutput) {
+    private fun routeAudioOutput(output: AudioOutput) {
         when (output) {
             AudioOutput.EARPIECE -> {
                 audioManager?.mode = AudioManager.MODE_IN_COMMUNICATION
