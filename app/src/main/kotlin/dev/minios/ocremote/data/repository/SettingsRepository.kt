@@ -648,9 +648,9 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    // Whisper/STT server URL (direct, not via GateClaw)
+    // Whisper/STT server URL (direct to whispercpp)
     val whisperUrl: Flow<String> = dataStore.data.map { preferences ->
-        preferences[WHISPER_URL_KEY] ?: "http://localhost:7372"
+        preferences[WHISPER_URL_KEY] ?: "http://192.168.0.154:7372"
     }
 
     suspend fun setWhisperUrl(url: String) {
@@ -661,7 +661,7 @@ class SettingsRepository @Inject constructor(
 
     // TTS server URL (GateClaw at 4100 proxies to PocketTTS at 8000)
     val ttsUrl: Flow<String> = dataStore.data.map { preferences ->
-        preferences[TTS_URL_KEY] ?: "http://localhost:4100"
+        preferences[TTS_URL_KEY] ?: "http://192.168.0.154:4100"
     }
 
     suspend fun setTtsUrl(url: String) {
