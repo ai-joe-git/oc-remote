@@ -669,7 +669,7 @@ class SettingsRepository @Inject constructor(
                 val httpClient = HttpClient()
                 val response: dev.minios.ocremote.data.api.VoiceInfoList = httpClient.get("$serverUrl/voice/voices").body()
                 httpClient.close()
-                response.voices.map { it.voiceId }
+                response.data.map { it.id }
             } catch (e: Exception) {
                 emptyList()
             }

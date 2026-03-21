@@ -129,14 +129,14 @@ class TtsManager(private val context: Context) {
                 }
             }
 
-            val response: SynthesizeResponse = client.post("$serverUrl/voice/synthesize") {
+            val response: dev.minios.ocremote.data.api.VoiceSynthesizeResponse = client.post("$serverUrl/voice/synthesize") {
                 contentType(ContentType.Application.Json)
                 setBody(SynthesizeRequest(text = text, voice = voice))
             }.body()
 
             client.close()
 
-            val audioBytes = response.audio
+            val audioBytes = response.getAudioBytes()
             withContext(Dispatchers.Main) {
                 playAudioBytes(audioBytes)
             }
@@ -286,7 +286,4 @@ class TtsManager(private val context: Context) {
 
     @Serializable
     data class SynthesizeRequest(val text: String, val voice: String)
-
-    @Serializable
-    data class SynthesizeResponse(val audio: ByteArray)
 }

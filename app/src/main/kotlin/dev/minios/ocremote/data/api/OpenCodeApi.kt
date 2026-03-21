@@ -867,7 +867,8 @@ class OpenCodeApi @Inject constructor(
             contentType(ContentType.Application.Json)
             setBody(VoiceSynthesizeRequest(text = text, voice = voice))
         }
-        return response.body()
+        val result: VoiceSynthesizeResponse = response.body()
+        return result.getAudioBytes()
     }
 
     suspend fun transcribeAudio(conn: ServerConnection, audioBytes: ByteArray, filename: String = "recording.m4a"): String {
@@ -1185,7 +1186,14 @@ data class VoiceInfo(
 
 @Serializable
 data class VoiceInfoList(
-    val voices: List<VoiceInfo>
+    val data: List<VoiceInfo> = emptyList()
+)
+
+@Serializable
+data class VoiceInfo(
+    val id: String,
+    val name: String,
+    val description: String? = null
 )
 
 @Serializable
@@ -1195,6 +1203,15 @@ data class VoiceSynthesizeRequest(
 )
 
 @Serializable
+data class VoiceSynthesizeResponse(
+    val ok: Boolean = true,
+    val audio: String = "", // base64 encoded
+    val contentType: String = "audio/wav"
+) {
+    fun getAudioBytes(): ByteArray = android.util.Base64.decode(audio, android.util.Base64.DEFAULT)
+}
+
+@Serializable
 data class VoiceTranscribeResponse(
-    val text: String
+    val text: String = ""
 )
