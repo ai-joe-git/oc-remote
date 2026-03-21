@@ -63,15 +63,24 @@ class SttManager(private val context: Context) {
     }
 
     fun startRecording(): Boolean {
-        if (isRecording) return false
+        Log.d(TAG, "startRecording called, isRecording=$isRecording")
+        if (isRecording) {
+            Log.d(TAG, "Already recording, returning false")
+            return false
+        }
 
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        val permission = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+        Log.d(TAG, "RECORD_AUDIO permission status: $permission")
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "Permission not granted, calling onError")
             onError("Microphone permission not granted")
             return false
         }
 
         try {
+            Log.d(TAG, "Creating temp file for recording")
             outputFile = File.createTempFile("recording_", ".m4a", context.cacheDir)
+            Log.d(TAG, "Temp file: ${outputFile?.absolutePath}")
 
             mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 MediaRecorder(context)
@@ -165,19 +174,26 @@ class SttManager(private val context: Context) {
     }
 
     fun startNativeRecognition() {
+        Log.d(TAG, "startNativeRecognition called")
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+            Log.d(TAG, "Speech recognition not available")
             onError("Speech recognition not available")
             return
         }
 
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        val permission = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+        Log.d(TAG, "RECORD_AUDIO permission status: $permission")
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "Permission not granted")
             onError("Microphone permission not granted")
             return
         }
 
         try {
+            Log.d(TAG, "Creating SpeechRecognizer")
             speechRecognizer?.destroy()
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
+            Log.d(TAG, "Setting recognition listener")
             speechRecognizer?.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: android.os.Bundle?) {
                     Log.d(TAG, "Speech recognizer ready")

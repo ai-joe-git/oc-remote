@@ -1407,19 +1407,23 @@ class ChatViewModel @Inject constructor(
 
     fun startRecording() {
         val vs = _voiceState.value
+        android.util.Log.d(TAG, "startRecording: voiceInputMode=${vs.voiceInputMode}, sttMode=${vs.sttMode}, isRecording=${vs.isRecording}")
         if (vs.voiceInputMode == dev.minios.ocremote.data.repository.SettingsRepository.VoiceInputMode.OFF) {
+            android.util.Log.d(TAG, "startRecording: voiceInputMode is OFF, returning")
             return
         }
 
         when (vs.sttMode) {
             dev.minios.ocremote.data.repository.SettingsRepository.SttMode.NATIVE -> {
+                android.util.Log.d(TAG, "startRecording: calling sttManager.startNativeRecognition()")
                 sttManager.startNativeRecognition()
             }
             dev.minios.ocremote.data.repository.SettingsRepository.SttMode.SERVER -> {
+                android.util.Log.d(TAG, "startRecording: calling sttManager.startRecording()")
                 sttManager.startRecording()
             }
             dev.minios.ocremote.data.repository.SettingsRepository.SttMode.OFF -> {
-                // Do nothing
+                android.util.Log.d(TAG, "startRecording: sttMode is OFF")
             }
         }
     }
