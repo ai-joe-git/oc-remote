@@ -659,9 +659,9 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    // TTS server URL (direct, not via GateClaw)
+    // TTS server URL (GateClaw at 4100 proxies to PocketTTS at 8000)
     val ttsUrl: Flow<String> = dataStore.data.map { preferences ->
-        preferences[TTS_URL_KEY] ?: "http://localhost:8000"
+        preferences[TTS_URL_KEY] ?: "http://localhost:4100"
     }
 
     suspend fun setTtsUrl(url: String) {
