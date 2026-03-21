@@ -6410,6 +6410,21 @@ private fun ChatInputBar(
                             }
                         }
 
+                        // TTS speak button - speak the last assistant message
+                        if (voiceState.ttsMode != dev.minios.ocremote.data.repository.SettingsRepository.TtsMode.OFF) {
+                            IconButton(
+                                onClick = { viewModel.speakLastMessage() },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (voiceState.isSpeaking) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                    contentDescription = if (voiceState.isSpeaking) "Stop speaking" else "Speak last message",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (voiceState.isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+
                         // Attach button (paperclip) — always visible, pinned right, aligned with Send button
                         IconButton(
                             onClick = onAttach,

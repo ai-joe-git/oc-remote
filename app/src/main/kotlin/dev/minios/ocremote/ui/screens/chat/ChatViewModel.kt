@@ -1472,6 +1472,19 @@ class ChatViewModel @Inject constructor(
         ttsManager.stop()
     }
 
+    fun speakLastMessage() {
+        val msgs = uiState.value.messages
+        val lastAssistant = msgs.lastOrNull { it.isAssistant }
+        if (lastAssistant != null) {
+            val text = lastAssistant.parts
+                .filterIsInstance<dev.minios.ocremote.domain.model.Part.Text>()
+                .joinToString("") { it.text }
+            if (text.isNotBlank()) {
+                speakText(text)
+            }
+        }
+    }
+
     private fun startRecordingDurationTimer() {
         recordingDurationJob?.cancel()
         recordingDurationJob = viewModelScope.launch {
