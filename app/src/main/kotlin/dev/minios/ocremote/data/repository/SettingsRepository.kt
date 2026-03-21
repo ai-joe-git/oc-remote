@@ -77,6 +77,8 @@ class SettingsRepository @Inject constructor(
         private val STT_LANGUAGE_KEY = stringPreferencesKey("stt_language")
         private val STT_MAX_DURATION_KEY = stringPreferencesKey("stt_max_duration")
         private val VOICE_INPUT_MODE_KEY = stringPreferencesKey("voice_input_mode")
+        private val WHISPER_URL_KEY = stringPreferencesKey("whisper_url")
+        private val TTS_URL_KEY = stringPreferencesKey("tts_url")
 
         /** SharedPreferences name used for synchronous locale reads in attachBaseContext. */
         private const val LOCALE_PREFS = "locale_prefs"
@@ -643,6 +645,28 @@ class SettingsRepository @Inject constructor(
     suspend fun setVoiceInputMode(mode: VoiceInputMode) {
         dataStore.edit { preferences ->
             preferences[VOICE_INPUT_MODE_KEY] = mode.name
+        }
+    }
+
+    // Whisper/STT server URL (direct, not via GateClaw)
+    val whisperUrl: Flow<String> = dataStore.data.map { preferences ->
+        preferences[WHISPER_URL_KEY] ?: "http://localhost:7372"
+    }
+
+    suspend fun setWhisperUrl(url: String) {
+        dataStore.edit { preferences ->
+            preferences[WHISPER_URL_KEY] = url
+        }
+    }
+
+    // TTS server URL (direct, not via GateClaw)
+    val ttsUrl: Flow<String> = dataStore.data.map { preferences ->
+        preferences[TTS_URL_KEY] ?: "http://localhost:8000"
+    }
+
+    suspend fun setTtsUrl(url: String) {
+        dataStore.edit { preferences ->
+            preferences[TTS_URL_KEY] = url
         }
     }
 

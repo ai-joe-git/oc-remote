@@ -243,6 +243,18 @@ class SettingsViewModel @Inject constructor(
         initialValue = SettingsRepository.VoiceInputMode.TALKWIE,
     )
 
+    val whisperUrl = settingsRepository.whisperUrl.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = "http://localhost:7372",
+    )
+
+    val ttsUrl = settingsRepository.ttsUrl.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = "http://localhost:8000",
+    )
+
     fun setLanguage(languageCode: String) {
         viewModelScope.launch {
             settingsRepository.setAppLanguage(languageCode)
@@ -471,6 +483,18 @@ class SettingsViewModel @Inject constructor(
     fun setVoiceInputMode(mode: SettingsRepository.VoiceInputMode) {
         viewModelScope.launch {
             settingsRepository.setVoiceInputMode(mode)
+        }
+    }
+
+    fun setWhisperUrl(url: String) {
+        viewModelScope.launch {
+            settingsRepository.setWhisperUrl(url)
+        }
+    }
+
+    fun setTtsUrl(url: String) {
+        viewModelScope.launch {
+            settingsRepository.setTtsUrl(url)
         }
     }
 }

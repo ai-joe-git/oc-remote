@@ -247,6 +247,8 @@ class ChatViewModel @Inject constructor(
     private val SettingsRepository.sttLanguage get() = settingsRepository.sttLanguage
     private val SettingsRepository.sttMaxDuration get() = settingsRepository.sttMaxDuration
     private val SettingsRepository.voiceInputMode get() = settingsRepository.voiceInputMode
+    private val SettingsRepository.whisperUrl get() = settingsRepository.whisperUrl
+    private val SettingsRepository.ttsUrl get() = settingsRepository.ttsUrl
 
     val uiState: StateFlow<ChatUiState> = combine(
         eventReducer.sessions,
@@ -543,6 +545,17 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.voiceInputMode.collect { mode ->
                 _voiceState.value = _voiceState.value.copy(voiceInputMode = mode)
+            }
+        }
+
+        viewModelScope.launch {
+            settingsRepository.whisperUrl.collect { url ->
+                sttManager.whisperUrl = url
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.ttsUrl.collect { url ->
+                ttsManager.ttsUrl = url
             }
         }
 
@@ -1435,7 +1448,7 @@ class ChatViewModel @Inject constructor(
                 val audioBytes = sttManager.stopRecording()
                 if (audioBytes.isNotEmpty()) {
                     try {
-                        val text = api.transcribeAudio(conn, audioBytes)
+                        val text = sttManager.recognizeServer(audioBytes, sttManager.whisperUrl)
                         if (text.isNotBlank()) {
                             sendMessage(text)
                         }

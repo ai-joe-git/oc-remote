@@ -45,6 +45,7 @@ class SttManager(private val context: Context) {
     var maxDurationMs: Int = 60000
     var language: String = "en-US"
     var currentMode: SttMode = SttMode.NATIVE
+    var whisperUrl: String = "http://localhost:7372"
 
     var onRecordingStarted: () -> Unit = {}
     var onRecordingStopped: (ByteArray) -> Unit = {}
@@ -281,13 +282,45 @@ class SttManager(private val context: Context) {
         speechRecognizer?.stopListening()
     }
 
-    suspend fun recognizeServer(audioBytes: ByteArray, serverUrl: String): String = withContext(Dispatchers.IO) {
+    suspend fun recognizeServer(audioBytes: ByteArray, whisperUrl: String): String = withContext(Dispatchers.IO) {
         try {
             val client = HttpClient {
                 install(HttpTimeout) {
                     requestTimeoutMillis = 60000
                     connectTimeoutMillis = 10000
                 }
+            }
+
+            // whispercpp OpenAI-compatible endpoint at /v1/audio/transcriptions
+            val response: WhisperTranscribeResponse = client.submitFormWithBinaryData(
+                url = "$whisperUrl/v1/audio/transcriptions",
+                formData = formData {
+                    append("file", audioBytes, io.ktor.http.Headers.build {
+                        append(HttpHeaders.ContentType, "audio/m4a")
+                        append(HttpHeaders.ContentDisposition, "filename=\"recording.m4a\"")
+                    })
+                    append("model", "whisper-large-v3-turbo")
+                    append("response_format", "text")
+                    if (language.isNotBlank()) {
+                        append("language", language.substring(0, 2))
+                    }
+                }
+            ).body()
+
+            client.close()
+            response.text ?: ""
+        } catch (e: Exception) {
+            Log.e(TAG, "Server transcription failed", e)
+            withContext(Dispatchers.Main) {
+                onError("Server transcription failed: ${e.message}")
+            }
+            throw e
+        }
+    }
+
+    @Serializable
+    data class WhisperTranscribeResponse(val text: String?)
+}
             }
 
             val response: TranscribeResponse = client.submitFormWithBinaryData(

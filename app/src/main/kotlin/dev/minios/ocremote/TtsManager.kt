@@ -38,6 +38,7 @@ class TtsManager(private val context: Context) {
     var currentSpeed: Float = 1.0f
     var autoPlay: Boolean = true
     var audioOutput: AudioOutput = AudioOutput.SPEAKER
+    var ttsUrl: String = "http://localhost:8000"
 
     var onStart: () -> Unit = {}
     var onDone: () -> Unit = {}
