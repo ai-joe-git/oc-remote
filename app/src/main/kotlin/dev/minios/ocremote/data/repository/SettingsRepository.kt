@@ -649,13 +649,15 @@ class SettingsRepository @Inject constructor(
     // ============ Voice Helpers ============
 
     fun getNativeTtsVoices(callback: (List<String>) -> Unit) {
-        val textToSpeech = TextToSpeech(context) { status ->
+        var tts: TextToSpeech? = null
+        tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                val voices = textToSpeech.voices?.map { it.name } ?: emptyList()
-                textToSpeech.shutdown()
+                @Suppress("DEPRECATION")
+                val voices = tts?.voices?.map { it.name } ?: emptyList()
+                tts?.shutdown()
                 callback(voices)
             } else {
-                textToSpeech.shutdown()
+                tts?.shutdown()
                 callback(emptyList())
             }
         }
