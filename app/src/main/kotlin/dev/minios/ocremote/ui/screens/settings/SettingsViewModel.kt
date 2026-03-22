@@ -508,9 +508,15 @@ class SettingsViewModel @Inject constructor(
                 val serverUrl = settingsRepository.ttsUrl.first()
                 val pocketTtsUrl = serverUrl.replace(":4100", ":8000")
                 val voices = api.getPocketTtsVoices(pocketTtsUrl)
-                callback(voices)
+                if (voices.isEmpty()) {
+                    // Fallback to default voice (matching GateClaw behavior)
+                    callback(listOf("david-attenborough-original"))
+                } else {
+                    callback(voices)
+                }
             } catch (e: Exception) {
-                callback(emptyList())
+                // Fallback to default voice on error
+                callback(listOf("david-attenborough-original"))
             }
         }
     }

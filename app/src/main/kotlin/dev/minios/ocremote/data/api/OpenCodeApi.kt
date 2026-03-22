@@ -863,7 +863,7 @@ class OpenCodeApi @Inject constructor(
 
     suspend fun getPocketTtsVoices(pocketTtsUrl: String): List<String> {
         val response: PocketTtsVoiceList = httpClient.get("$pocketTtsUrl/v1/audio/voices").body()
-        return response.voices?.mapNotNull { it.voice_id } ?: emptyList()
+        return response.voices?.mapNotNull { it.voice_id ?: it.name } ?: emptyList()
     }
 
     suspend fun synthesizeSpeech(conn: ServerConnection, text: String, voice: String): ByteArray {
