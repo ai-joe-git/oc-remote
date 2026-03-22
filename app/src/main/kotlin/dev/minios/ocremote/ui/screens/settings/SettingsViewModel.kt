@@ -506,17 +506,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val serverUrl = settingsRepository.ttsUrl.first()
-                val pocketTtsUrl = serverUrl.replace(":4100", ":8000")
-                val voices = api.getPocketTtsVoices(pocketTtsUrl)
-                if (voices.isEmpty()) {
-                    // Fallback to default voice (matching GateClaw behavior)
-                    callback(listOf("david-attenborough-original"))
-                } else {
-                    callback(voices)
-                }
+                val conn = ServerConnection.from(serverUrl)
+                val voices = api.getTtsVoices(conn)
+                callback(voices.map { it.id })
             } catch (e: Exception) {
-                // Fallback to default voice on error
-                callback(listOf("david-attenborough-original"))
+                callback(emptyList())
             }
         }
     }
