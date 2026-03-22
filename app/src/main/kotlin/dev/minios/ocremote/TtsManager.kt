@@ -148,7 +148,7 @@ class TtsManager(private val context: Context) {
                 setBody(body)
             }
 
-            val audioBytes = response.readBytes()
+            val audioBytes = response.bodyAsBytes()
             client.close()
 
             withContext(Dispatchers.Main) {

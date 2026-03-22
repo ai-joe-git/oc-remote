@@ -26,6 +26,7 @@ import kotlinx.serialization.Serializable
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
 
 class SttManager(private val context: Context) {
 
@@ -159,7 +160,7 @@ class SttManager(private val context: Context) {
         maxDurationHandler.removeCallbacks(maxDurationRunnable)
         isRecording = false
 
-        recordingJob?.cancelAndJoin()
+        recordingJob?.cancel()
 
         try {
             audioRecord?.stop()
@@ -314,7 +315,8 @@ class SttManager(private val context: Context) {
 
     suspend fun recognizeServer(audioBytes: ByteArray, whisperUrl: String): String = withContext(Dispatchers.IO) {
         try {
-            val wavBytes = encodeM4aToWav(audioBytes)
+            // audioBytes is already WAV from stopRecording()
+            val wavBytes = audioBytes
 
             val client = HttpClient {
                 install(HttpTimeout) {
