@@ -130,28 +130,14 @@ class TtsManager(private val context: Context) {
                 }
             }
 
-            var selectedVoice = voice.ifBlank { "david-attenborough-original" }
-            if (!selectedVoice.contains(".")) {
-                selectedVoice += ".wav"
-            }
-
-            val body = mapOf(
-                "model" to "tts-1",
-                "input" to text,
-                "voice" to selectedVoice,
-                "response_format" to "wav",
-                "speed" to currentSpeed
-            )
-
-            // Replace port 4100 (GateClaw) with 8000 (PocketTTS)
-            val pocketTtsUrl = serverUrl.replace(":4100", ":8000")
-
-            val audioBytes: ByteArray = client.post("$pocketTtsUrl/v1/audio/speech") {
+            val response: dev.minios.ocremote.data.api.VoiceSynthesizeResponse = client.post("$serverUrl/voice/synthesize") {
                 contentType(ContentType.Application.Json)
-                setBody(body)
+                setBody(SynthesizeRequest(text = text, voice = voice))
             }.body()
+
             client.close()
 
+            val audioBytes = response.getAudioBytes()
             withContext(Dispatchers.Main) {
                 playAudioBytes(audioBytes)
             }
