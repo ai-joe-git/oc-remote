@@ -506,9 +506,9 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val serverUrl = settingsRepository.ttsUrl.first()
-                val conn = ServerConnection.from(serverUrl)
-                val voices = api.getTtsVoices(conn)
-                callback(voices.map { it.id })
+                val pocketTtsUrl = serverUrl.replace(":4100", ":8000")
+                val voices = api.getPocketTtsVoices(pocketTtsUrl)
+                callback(voices)
             } catch (e: Exception) {
                 callback(emptyList())
             }

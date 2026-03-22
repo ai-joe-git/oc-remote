@@ -35,12 +35,13 @@ class SttManager(private val context: Context) {
         private const val BIT_RATE = 128000
     }
 
-    private var mediaRecorder: MediaRecorder? = null
+    private var audioRecord: android.media.AudioRecord? = null
     private var outputFile: File? = null
     private var isRecording = false
     private var recordingStartTime: Long = 0
 
     private var speechRecognizer: SpeechRecognizer? = null
+    private var recordingJob: Job? = null
 
     var maxDurationMs: Int = 60000
     var language: String = "en-US"
@@ -83,32 +84,61 @@ class SttManager(private val context: Context) {
         }
 
         try {
-            Log.d(TAG, "Creating temp file for recording")
-            outputFile = File.createTempFile("recording_", ".m4a", context.cacheDir)
-            Log.d(TAG, "Temp file: ${outputFile?.absolutePath}")
+            outputFile = File.createTempFile("recording_", ".pcm", context.cacheDir)
+            Log.d(TAG, "Temp file for PCM: ${outputFile?.absolutePath}")
 
-            mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                MediaRecorder(context)
+            val bufferSize = android.media.AudioRecord.getMinBufferSize(
+                SAMPLE_RATE,
+                android.media.AudioFormat.CHANNEL_IN_MONO,
+                android.media.AudioFormat.ENCODING_PCM_16BIT
+            )
+
+            audioRecord = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                android.media.AudioRecord.Builder()
+                    .setAudioSource(android.media.MediaRecorder.AudioSource.MIC)
+                    .setAudioFormat(
+                        android.media.AudioFormat.Builder()
+                            .setSampleRate(SAMPLE_RATE)
+                            .setChannelMask(android.media.AudioFormat.CHANNEL_IN_MONO)
+                            .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                            .build()
+                    )
+                    .setBufferSizeInBytes(bufferSize)
+                    .build()
             } else {
                 @Suppress("DEPRECATION")
-                MediaRecorder()
+                android.media.AudioRecord(
+                    android.media.MediaRecorder.AudioSource.MIC,
+                    SAMPLE_RATE,
+                    android.media.AudioFormat.CHANNEL_IN_MONO,
+                    android.media.AudioFormat.ENCODING_PCM_16BIT,
+                    bufferSize
+                )
             }
 
-            @Suppress("DEPRECATION")
-            mediaRecorder?.apply {
-                setAudioSource(MediaRecorder.AudioSource.MIC)
-                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-                setAudioSamplingRate(SAMPLE_RATE)
-                setAudioEncodingBitRate(BIT_RATE)
-                setOutputFile(outputFile?.absolutePath)
-                prepare()
-                start()
+            if (audioRecord?.state != android.media.AudioRecord.STATE_INITIALIZED) {
+                throw IllegalStateException("AudioRecord failed to initialize")
             }
 
+            audioRecord?.startRecording()
             isRecording = true
             recordingStartTime = System.currentTimeMillis()
             onRecordingStarted()
+
+            recordingJob = scope.launch(Dispatchers.IO) {
+                val buffer = ByteArray(bufferSize)
+                val outputStream = FileOutputStream(outputFile)
+                try {
+                    while (isActive && isRecording) {
+                        val bytesRead = audioRecord?.read(buffer, 0, buffer.size) ?: 0
+                        if (bytesRead > 0) {
+                            outputStream.write(buffer, 0, bytesRead)
+                        }
+                    }
+                } finally {
+                    outputStream.close()
+                }
+            }
 
             if (maxDurationMs > 0) {
                 maxDurationHandler.postDelayed(maxDurationRunnable, maxDurationMs.toLong())
@@ -127,20 +157,20 @@ class SttManager(private val context: Context) {
         if (!isRecording) return ByteArray(0)
 
         maxDurationHandler.removeCallbacks(maxDurationRunnable)
-
-        try {
-            mediaRecorder?.apply {
-                stop()
-                release()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping MediaRecorder", e)
-        }
-
-        mediaRecorder = null
         isRecording = false
 
-        val audioBytes = outputFile?.let { file ->
+        recordingJob?.cancelAndJoin()
+
+        try {
+            audioRecord?.stop()
+            audioRecord?.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping AudioRecord", e)
+        }
+
+        audioRecord = null
+
+        val pcmBytes = outputFile?.let { file ->
             try {
                 FileInputStream(file).use { fis ->
                     ByteArrayOutputStream().use { bos ->
@@ -156,24 +186,24 @@ class SttManager(private val context: Context) {
             }
         } ?: ByteArray(0)
 
-        onRecordingStopped(audioBytes)
-        return audioBytes
+        val wavBytes = encodePcmToWav(pcmBytes)
+        onRecordingStopped(wavBytes)
+        return wavBytes
     }
 
     fun cancelRecording() {
         maxDurationHandler.removeCallbacks(maxDurationRunnable)
+        isRecording = false
+        recordingJob?.cancel()
 
         try {
-            mediaRecorder?.apply {
-                stop()
-                release()
-            }
+            audioRecord?.stop()
+            audioRecord?.release()
         } catch (e: Exception) {
-            Log.e(TAG, "Error canceling MediaRecorder", e)
+            Log.e(TAG, "Error canceling AudioRecord", e)
         }
 
-        mediaRecorder = null
-        isRecording = false
+        audioRecord = null
         outputFile?.delete()
         outputFile = null
     }
@@ -284,6 +314,8 @@ class SttManager(private val context: Context) {
 
     suspend fun recognizeServer(audioBytes: ByteArray, whisperUrl: String): String = withContext(Dispatchers.IO) {
         try {
+            val wavBytes = encodeM4aToWav(audioBytes)
+
             val client = HttpClient {
                 install(HttpTimeout) {
                     requestTimeoutMillis = 60000
@@ -291,12 +323,12 @@ class SttManager(private val context: Context) {
                 }
             }
 
-            val response: WhisperTranscribeResponse = client.submitFormWithBinaryData(
+            val responseText: String = client.submitFormWithBinaryData(
                 url = "$whisperUrl/v1/audio/transcriptions",
                 formData = formData {
-                    append("file", audioBytes, io.ktor.http.Headers.build {
-                        append(HttpHeaders.ContentType, "audio/m4a")
-                        append(HttpHeaders.ContentDisposition, "filename=\"recording.m4a\"")
+                    append("file", wavBytes, io.ktor.http.Headers.build {
+                        append(HttpHeaders.ContentType, "audio/wav")
+                        append(HttpHeaders.ContentDisposition, "filename=\"audio.wav\"")
                     })
                     append("model", "whisper-large-v3-turbo")
                     append("response_format", "text")
@@ -307,7 +339,7 @@ class SttManager(private val context: Context) {
             ).body()
 
             client.close()
-            response.text ?: ""
+            responseText.trim()
         } catch (e: Exception) {
             Log.e(TAG, "Server transcription failed", e)
             withContext(Dispatchers.Main) {
@@ -317,8 +349,46 @@ class SttManager(private val context: Context) {
         }
     }
 
-    @Serializable
-    data class WhisperTranscribeResponse(val text: String?)
+    private fun encodePcmToWav(pcmBytes: ByteArray): ByteArray {
+        val byteRate = SAMPLE_RATE * 1 * 16 / 8
+        val blockAlign = 1 * 16 / 8
+        val dataSize = pcmBytes.size
+        val fileSize = 36 + dataSize
+
+        val wavOutput = ByteArrayOutputStream()
+        wavOutput.write("RIFF".toByteArray())
+        wavOutput.write(intToByteArrayLE(fileSize))
+        wavOutput.write("WAVE".toByteArray())
+        wavOutput.write("fmt ".toByteArray())
+        wavOutput.write(intToByteArrayLE(16))
+        wavOutput.write(shortToByteArrayLE(1))
+        wavOutput.write(shortToByteArrayLE(1))
+        wavOutput.write(intToByteArrayLE(SAMPLE_RATE))
+        wavOutput.write(intToByteArrayLE(byteRate))
+        wavOutput.write(shortToByteArrayLE(blockAlign.toShort()))
+        wavOutput.write(shortToByteArrayLE(16))
+        wavOutput.write("data".toByteArray())
+        wavOutput.write(intToByteArrayLE(dataSize))
+        wavOutput.write(pcmBytes)
+
+        return wavOutput.toByteArray()
+    }
+
+    private fun intToByteArrayLE(value: Int): ByteArray {
+        return byteArrayOf(
+            (value and 0xFF).toByte(),
+            ((value shr 8) and 0xFF).toByte(),
+            ((value shr 16) and 0xFF).toByte(),
+            ((value shr 24) and 0xFF).toByte()
+        )
+    }
+
+    private fun shortToByteArrayLE(value: Short): ByteArray {
+        return byteArrayOf(
+            (value.toInt() and 0xFF).toByte(),
+            ((value.toInt() shr 8) and 0xFF).toByte()
+        )
+    }
 
     fun release() {
         cancelRecording()
@@ -329,8 +399,14 @@ class SttManager(private val context: Context) {
     }
 
     private fun cleanupRecording() {
-        mediaRecorder?.release()
-        mediaRecorder = null
+        try {
+            audioRecord?.stop()
+            audioRecord?.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing AudioRecord", e)
+        }
+        audioRecord = null
+        recordingJob?.cancel()
         outputFile?.delete()
         outputFile = null
         isRecording = false

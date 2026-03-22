@@ -118,6 +118,10 @@ fun SettingsScreen(
     var showImageMaxSideDialog by remember { mutableStateOf(false) }
     var showImageQualityDialog by remember { mutableStateOf(false) }
     var showLocalLaunchOptionsDialog by remember { mutableStateOf(false) }
+    var showTtsUrlDialog by remember { mutableStateOf(false) }
+    var showWhisperUrlDialog by remember { mutableStateOf(false) }
+    var editableTtsUrl by remember { mutableStateOf(ttsUrl) }
+    var editableWhisperUrl by remember { mutableStateOf(whisperUrl) }
 
     val isAmoledTheme = MaterialTheme.colorScheme.background == Color.Black &&
         MaterialTheme.colorScheme.surface == Color.Black

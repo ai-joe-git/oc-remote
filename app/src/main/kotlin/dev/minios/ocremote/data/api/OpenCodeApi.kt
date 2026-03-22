@@ -861,6 +861,11 @@ class OpenCodeApi @Inject constructor(
         }.body()
     }
 
+    suspend fun getPocketTtsVoices(pocketTtsUrl: String): List<String> {
+        val response: PocketTtsVoiceList = httpClient.get("$pocketTtsUrl/v1/audio/voices").body()
+        return response.voices?.mapNotNull { it.voice_id } ?: emptyList()
+    }
+
     suspend fun synthesizeSpeech(conn: ServerConnection, text: String, voice: String): ByteArray {
         val response = httpClient.post("${conn.baseUrl}/voice/synthesize") {
             conn.authHeader?.let { header("Authorization", it) }
@@ -1207,4 +1212,15 @@ data class VoiceSynthesizeResponse(
 @Serializable
 data class VoiceTranscribeResponse(
     val text: String = ""
+)
+
+@Serializable
+data class PocketTtsVoiceList(
+    val voices: List<PocketTtsVoice>? = null
+)
+
+@Serializable
+data class PocketTtsVoice(
+    val voice_id: String? = null,
+    val name: String? = null
 )

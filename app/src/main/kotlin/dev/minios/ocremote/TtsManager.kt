@@ -130,14 +130,27 @@ class TtsManager(private val context: Context) {
                 }
             }
 
-            val response: dev.minios.ocremote.data.api.VoiceSynthesizeResponse = client.post("$serverUrl/voice/synthesize") {
-                contentType(ContentType.Application.Json)
-                setBody(SynthesizeRequest(text = text, voice = voice))
-            }.body()
+            var selectedVoice = voice.ifBlank { "david-attenborough-original" }
+            if (!selectedVoice.contains(".")) {
+                selectedVoice += ".wav"
+            }
 
+            val body = mapOf(
+                "model" to "tts-1",
+                "input" to text,
+                "voice" to selectedVoice,
+                "response_format" to "wav",
+                "speed" to currentSpeed
+            )
+
+            val response = client.post("$serverUrl/v1/audio/speech") {
+                contentType(ContentType.Application.Json)
+                setBody(body)
+            }
+
+            val audioBytes = response.readBytes()
             client.close()
 
-            val audioBytes = response.getAudioBytes()
             withContext(Dispatchers.Main) {
                 playAudioBytes(audioBytes)
             }
