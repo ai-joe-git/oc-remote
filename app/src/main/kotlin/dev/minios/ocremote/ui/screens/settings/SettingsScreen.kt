@@ -754,13 +754,18 @@ fun SettingsScreen(
                 onDismissRequest = { showVoiceDialog = false },
                 title = { Text("Select TTS Voice") },
                 text = {
-                    Column {
-                        if (availableVoices.isEmpty()) {
-                            Text("No voices available. Check TTS server connection.")
-                        } else {
-                            availableVoices.forEach { voice ->
+                    if (availableVoices.isEmpty()) {
+                        Text("No voices available. Check TTS server connection.")
+                    } else {
+                        LazyColumn {
+                            items(availableVoices) { voice ->
                                 ListItem(
                                     headlineContent = { Text(voice) },
+                                    trailingContent = {
+                                        if (voice == ttsVoice) {
+                                            Icon(Icons.Default.Check, contentDescription = "Selected")
+                                        }
+                                    },
                                     modifier = Modifier.clickable {
                                         viewModel.setTtsVoice(voice)
                                         showVoiceDialog = false

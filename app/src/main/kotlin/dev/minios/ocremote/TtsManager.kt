@@ -143,7 +143,10 @@ class TtsManager(private val context: Context) {
                 "speed" to currentSpeed
             )
 
-            val audioBytes: ByteArray = client.post("$serverUrl/v1/audio/speech") {
+            // Replace port 4100 (GateClaw) with 8000 (PocketTTS)
+            val pocketTtsUrl = serverUrl.replace(":4100", ":8000")
+
+            val audioBytes: ByteArray = client.post("$pocketTtsUrl/v1/audio/speech") {
                 contentType(ContentType.Application.Json)
                 setBody(body)
             }.body()
