@@ -143,12 +143,10 @@ class TtsManager(private val context: Context) {
                 "speed" to currentSpeed
             )
 
-            val response = client.post("$serverUrl/v1/audio/speech") {
+            val audioBytes: ByteArray = client.post("$serverUrl/v1/audio/speech") {
                 contentType(ContentType.Application.Json)
                 setBody(body)
-            }
-
-            val audioBytes = response.bodyAsBytes()
+            }.body()
             client.close()
 
             withContext(Dispatchers.Main) {
